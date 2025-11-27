@@ -25,12 +25,14 @@ Imports DWSIM.Thermodynamics.Streams
 Imports DWSIM.SharedClasses
 Imports DWSIM.Interfaces
 Imports DWSIM.Interfaces.Enums
+Imports SkiaSharp.Views.Desktop.Extensions
 
 Namespace UnitOperations
 
     <System.Serializable()> Public Class GeothermalSeparator
 
         Inherits UnitOperations.UnitOpBaseClass
+        Implements IExternalUnitOperation
 
         Public Overrides Property ObjectClass As SimulationObjectClass = SimulationObjectClass.Separators
 
@@ -662,6 +664,12 @@ Namespace UnitOperations
         End Sub
 
         Public Overrides Function GetIconBitmap() As Object
+            Dim assembly = System.Reflection.Assembly.GetExecutingAssembly()
+            Using stream = assembly.GetManifestResourceStream("DWSIM.UnitOperations.separator.png")
+                If stream IsNot Nothing Then
+                    Return New System.Drawing.Bitmap(stream)
+                End If
+            End Using
             Return Nothing
         End Function
 
@@ -687,6 +695,103 @@ Namespace UnitOperations
                 Return True
             End Get
         End Property
+
+#Region "IExternalUnitOperation Implementation"
+
+        Private IconImage As SkiaSharp.SKImage
+
+        Public Function ReturnInstance(typename As String) As Object Implements IExternalUnitOperation.ReturnInstance
+            Return New GeothermalSeparator()
+        End Function
+
+        Public ReadOnly Property Prefix As String Implements IExternalUnitOperation.Prefix
+            Get
+                Return "GSEP"
+            End Get
+        End Property
+
+        Public ReadOnly Property ExternalName As String Implements IExternalUnitOperation.Name
+            Get
+                Return "Geothermal Separator"
+            End Get
+        End Property
+
+        Public ReadOnly Property ExternalDescription As String Implements IExternalUnitOperation.Description
+            Get
+                Return "Geothermal Separator (Lazalde-Crabtree Method)"
+            End Get
+        End Property
+
+        Public Sub Draw(g As Object) Implements IExternalUnitOperation.Draw
+            Dim canvas = DirectCast(g, SkiaSharp.SKCanvas)
+
+            ' Load and cache icon
+            If IconImage Is Nothing Then
+                Dim iconBitmap = DirectCast(GetIconBitmap(), System.Drawing.Bitmap)
+                If iconBitmap IsNot Nothing Then
+                    Using skBitmap = iconBitmap.ToSKBitmap()
+                        IconImage = SkiaSharp.SKImage.FromBitmap(skBitmap)
+                    End Using
+                End If
+            End If
+
+            ' Draw the image
+            If IconImage IsNot Nothing Then
+                Using p As New SkiaSharp.SKPaint With {.FilterQuality = SkiaSharp.SKFilterQuality.High}
+                    canvas.DrawImage(IconImage, New SkiaSharp.SKRect(GraphicObject.X, GraphicObject.Y,
+                                     GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height), p)
+                End Using
+            End If
+        End Sub
+
+        Public Sub CreateConnectors() Implements IExternalUnitOperation.CreateConnectors
+            ' Inlet connector (material stream)
+            If GraphicObject.InputConnectors.Count = 0 Then
+                Dim portIn As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
+                portIn.IsEnergyConnector = False
+                portIn.Type = Interfaces.Enums.GraphicObjects.ConType.ConIn
+                portIn.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + GraphicObject.Height / 2)
+                portIn.ConnectorName = "Inlet"
+                GraphicObject.InputConnectors.Add(portIn)
+            End If
+
+            ' Vapor outlet connector
+            If GraphicObject.OutputConnectors.Count < 1 Then
+                Dim portVapor As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
+                portVapor.IsEnergyConnector = False
+                portVapor.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
+                portVapor.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width / 2, GraphicObject.Y)
+                portVapor.ConnectorName = "Vapor Out"
+                GraphicObject.OutputConnectors.Add(portVapor)
+            End If
+
+            ' Liquid outlet connector
+            If GraphicObject.OutputConnectors.Count < 2 Then
+                Dim portLiquid As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
+                portLiquid.IsEnergyConnector = False
+                portLiquid.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
+                portLiquid.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height)
+                portLiquid.ConnectorName = "Liquid Out"
+                GraphicObject.OutputConnectors.Add(portLiquid)
+            End If
+
+            ' Update positions
+            If GraphicObject.InputConnectors.Count > 0 Then
+                GraphicObject.InputConnectors(0).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + GraphicObject.Height / 2)
+            End If
+            If GraphicObject.OutputConnectors.Count > 0 Then
+                GraphicObject.OutputConnectors(0).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width / 2, GraphicObject.Y)
+            End If
+            If GraphicObject.OutputConnectors.Count > 1 Then
+                GraphicObject.OutputConnectors(1).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height)
+            End If
+        End Sub
+
+        Public Sub PopulateEditorPanel(container As Object) Implements IExternalUnitOperation.PopulateEditorPanel
+            ' Use default property grid editor
+        End Sub
+
+#End Region
 
     End Class
 

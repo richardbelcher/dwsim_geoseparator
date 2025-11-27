@@ -81,6 +81,26 @@
       <HintPath>$(LOCALAPPDATA)\DWSIM\WeifenLuo.WinFormsUI.Docking.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="SkiaSharp">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\SkiaSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SkiaSharp.Views.Desktop.Common">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\SkiaSharp.Views.Desktop.Common.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SkiaSharp.Views.WindowsForms">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\SkiaSharp.Views.WindowsForms.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.Drawing.SkiaSharp">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.Drawing.SkiaSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.DrawingTools.Point">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.DrawingTools.Point.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>
@@ -91,17 +111,11 @@
     <Compile Include="EditingForms\EditingForm_GeothermalSeparator.Designer.vb">
       <DependentUpon>EditingForm_GeothermalSeparator.vb</DependentUpon>
     </Compile>
-    <Compile Include="My Project\Resources.Designer.vb">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="My Project\Resources.resx">
-      <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.vb</LastGenOutput>
+    <EmbeddedResource Include="separator.png">
+      <LogicalName>DWSIM.UnitOperations.separator.png</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 
