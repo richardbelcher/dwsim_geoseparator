@@ -1,0 +1,88 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Language>VB</Language>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>DWSIM.UnitOperations.Tests</RootNamespace>
+    <AssemblyName>GeothermalSeparatorTestRunner</AssemblyName>
+    <StartupObject>DWSIM.UnitOperations.Tests.TestGeothermalSeparator</StartupObject>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <MyType>Console</MyType>
+    <OptionStrict>Off</OptionStrict>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionCompare>Binary</OptionCompare>
+    <OptionInfer>On</OptionInfer>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>$(LOCALAPPDATA)\DWSIM\</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="DWSIM.Thermodynamics">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.Thermodynamics.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.UnitOperations">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.UnitOperations.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.SharedClasses">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.SharedClasses.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.MathOps">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.MathOps.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.Interfaces">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.Interfaces.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="CapeOpen">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\CapeOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.Drawing.SkiaSharp">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.Drawing.SkiaSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.DrawingTools.Point">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.DrawingTools.Point.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SkiaSharp">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\SkiaSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="WeifenLuo.WinFormsUI.Docking">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\WeifenLuo.WinFormsUI.Docking.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DWSIM.UnitOperations.GeothermalSeparator.vbproj" />
+  </ItemGroup>
+
+
+</Project>

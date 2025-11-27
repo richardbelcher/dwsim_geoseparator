@@ -725,110 +725,278 @@ Namespace UnitOperations
         Public Sub Draw(g As Object) Implements IExternalUnitOperation.Draw
             Dim canvas = DirectCast(g, SkiaSharp.SKCanvas)
 
-            ' Load and cache icon
-            If IconImage Is Nothing Then
-                Dim iconBitmap = DirectCast(GetIconBitmap(), System.Drawing.Bitmap)
-                If iconBitmap IsNot Nothing Then
-                    Using skBitmap = iconBitmap.ToSKBitmap()
-                        IconImage = SkiaSharp.SKImage.FromBitmap(skBitmap)
-                    End Using
-                End If
-            End If
+            Dim X = GraphicObject.X
+            Dim Y = GraphicObject.Y
+            Dim Width = GraphicObject.Width
+            Dim Height = GraphicObject.Height
 
-            ' Draw the image
-            If IconImage IsNot Nothing Then
-                Using p As New SkiaSharp.SKPaint With {.FilterQuality = SkiaSharp.SKFilterQuality.High}
-                    canvas.DrawImage(IconImage, New SkiaSharp.SKRect(GraphicObject.X, GraphicObject.Y,
-                                     GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height), p)
-                End Using
-            End If
+            ' Check DrawMode from GraphicObject
+            Dim drawMode As Integer = 0
+            Try
+                drawMode = CInt(GraphicObject.GetType().GetProperty("DrawMode")?.GetValue(GraphicObject))
+            Catch
+                drawMode = 0
+            End Try
+
+            Select Case drawMode
+                Case 2
+                    ' Icon mode - draw PNG image
+                    If IconImage Is Nothing Then
+                        Dim iconBitmap = DirectCast(GetIconBitmap(), System.Drawing.Bitmap)
+                        If iconBitmap IsNot Nothing Then
+                            Using skBitmap = iconBitmap.ToSKBitmap()
+                                IconImage = SkiaSharp.SKImage.FromBitmap(skBitmap)
+                            End Using
+                        End If
+                    End If
+
+                    If IconImage IsNot Nothing Then
+                        Using p As New SkiaSharp.SKPaint With {.FilterQuality = SkiaSharp.SKFilterQuality.High}
+                            canvas.DrawImage(IconImage, New SkiaSharp.SKRect(X, Y, X + Width, Y + Height), p)
+                        End Using
+                    End If
+
+                Case Else
+                    ' Default (0) or B/W (1) mode - draw vector graphics
+                    Dim lineColor As SkiaSharp.SKColor = SkiaSharp.SKColors.SteelBlue
+                    If drawMode = 1 Then
+                        lineColor = SkiaSharp.SKColors.Black
+                    Else
+                        ' Get line color from status
+                        Try
+                            Dim status = GraphicObject.Status
+                            Select Case status
+                                Case Interfaces.Enums.GraphicObjects.Status.Calculated
+                                    lineColor = SkiaSharp.SKColors.SteelBlue
+                                Case Interfaces.Enums.GraphicObjects.Status.Calculating
+                                    lineColor = SkiaSharp.SKColors.YellowGreen
+                                Case Interfaces.Enums.GraphicObjects.Status.ErrorCalculating
+                                    lineColor = SkiaSharp.SKColors.Salmon
+                                Case Interfaces.Enums.GraphicObjects.Status.Idle
+                                    lineColor = SkiaSharp.SKColors.SteelBlue
+                                Case Interfaces.Enums.GraphicObjects.Status.Inactive
+                                    lineColor = SkiaSharp.SKColors.Gray
+                                Case Interfaces.Enums.GraphicObjects.Status.NotCalculated
+                                    lineColor = SkiaSharp.SKColors.Salmon
+                                Case Interfaces.Enums.GraphicObjects.Status.Modified
+                                    lineColor = SkiaSharp.SKColors.LightGreen
+                            End Select
+                        Catch
+                        End Try
+                    End If
+
+                    ' Outline pen
+                    Using myPen As New SkiaSharp.SKPaint()
+                        myPen.Color = lineColor
+                        myPen.StrokeWidth = 1
+                        myPen.IsStroke = True
+                        myPen.IsAntialias = True
+
+                        ' Fill pen (semi-transparent)
+                        Using gradPen As New SkiaSharp.SKPaint()
+                            If drawMode = 0 Then
+                                gradPen.Color = lineColor.WithAlpha(50)
+                            Else
+                                gradPen.Color = SkiaSharp.SKColors.Transparent
+                            End If
+                            gradPen.IsStroke = False
+                            gradPen.IsAntialias = True
+
+                            ' Vessel body dimensions (taller vessel - double height ratio)
+                            Dim vesselLeft = X + 0.3 * Width
+                            Dim vesselRight = X + 0.7 * Width
+                            Dim vesselWidth = vesselRight - vesselLeft
+
+                            ' Main body rectangle (taller proportions)
+                            Dim bodyRect As New SkiaSharp.SKRect(vesselLeft, Y + 0.1 * Height, vesselRight, Y + 0.9 * Height)
+                            canvas.DrawRect(bodyRect, gradPen)
+                            canvas.DrawRect(bodyRect, myPen)
+
+                            ' Top dome (elliptical arc)
+                            Dim topArcRect As New SkiaSharp.SKRect(vesselLeft, Y, vesselRight, Y + 0.2 * Height)
+                            canvas.DrawArc(topArcRect, -180, 180, False, gradPen)
+                            canvas.DrawArc(topArcRect, -180, 180, False, myPen)
+
+                            ' Bottom dome (elliptical arc)
+                            Dim bottomArcRect As New SkiaSharp.SKRect(vesselLeft, Y + 0.8 * Height, vesselRight, Y + Height)
+                            canvas.DrawArc(bottomArcRect, 0, 180, False, gradPen)
+                            canvas.DrawArc(bottomArcRect, 0, 180, False, myPen)
+
+                            ' === Geothermal Separator Internals ===
+
+                            ' Steam tube parameters
+                            Dim tubeWidth = 0.15 * vesselWidth
+                            Dim tubeCenterX = vesselLeft + vesselWidth / 2
+                            Dim tubeLeft = tubeCenterX - tubeWidth / 2
+                            Dim tubeRight = tubeCenterX + tubeWidth / 2
+                            Dim tubeTop = Y + 0.06 * Height
+                            Dim bendStartY = Y + 0.58 * Height  ' Where vertical section ends
+                            Dim bendRadius = tubeWidth          ' Bend radius
+
+                            ' Steam tube - straight vertical section (from top to bend)
+                            canvas.DrawLine(tubeLeft, tubeTop, tubeLeft, bendStartY, myPen)
+                            canvas.DrawLine(tubeRight, tubeTop, tubeRight, bendStartY, myPen)
+
+                            ' Steam tube - 90° bend turning RIGHT
+                            ' Outer curve (left edge curves down to horizontal) - center at inner corner (tubeRight, bendStartY)
+                            ' In SkiaSharp: 180° = left, 90° = down. Sweep -90° goes from left to down (clockwise visually)
+                            Dim outerBendRect As New SkiaSharp.SKRect(tubeRight - tubeWidth, bendStartY - tubeWidth, tubeRight + tubeWidth, bendStartY + tubeWidth)
+                            canvas.DrawArc(outerBendRect, 180, -90, False, myPen)
+
+                            ' Inner curve (right edge) - sharp corner at (tubeRight, bendStartY)
+                            ' Just connect with lines for clean look
+
+                            ' Steam tube - horizontal section to vessel wall
+                            Dim horizontalY = bendStartY + tubeWidth
+                            canvas.DrawLine(tubeRight, bendStartY, vesselRight, bendStartY, myPen)
+                            canvas.DrawLine(tubeRight, bendStartY + tubeWidth, vesselRight, bendStartY + tubeWidth, myPen)
+
+                            ' Internal baffle plate (below steam tube)
+                            Dim plateY = Y + 0.72 * Height
+                            Dim plateGap = 0.08 * vesselWidth
+                            canvas.DrawLine(vesselLeft + 0.05 * vesselWidth, plateY, tubeCenterX - plateGap, plateY, myPen)
+                            canvas.DrawLine(tubeCenterX + plateGap, plateY, vesselRight - 0.05 * vesselWidth, plateY, myPen)
+
+                        End Using
+                    End Using
+
+            End Select
         End Sub
 
         Public Sub CreateConnectors() Implements IExternalUnitOperation.CreateConnectors
-            ' Create 7 input connectors (6 material streams + 1 energy stream) to match DWSIM Vessel
-            ' Input 0-5: Material streams
+            Dim X = GraphicObject.X
+            Dim Y = GraphicObject.Y
+            Dim Width = GraphicObject.Width
+            Dim Height = GraphicObject.Height
+
+            ' Vessel body dimensions (must match Draw method - taller vessel)
+            Dim vesselLeft = X + 0.3 * Width
+            Dim vesselRight = X + 0.7 * Width
+            Dim vesselWidth = vesselRight - vesselLeft
+
+            ' Steam tube parameters (must match Draw method)
+            Dim tubeWidth = 0.15 * vesselWidth
+            Dim bendStartY = Y + 0.58 * Height  ' Where vertical section ends
+
+            ' Connector positions
+            Dim inletY = Y + 0.4 * Height  ' Left side inlet
+            Dim steamOutletY = bendStartY + tubeWidth / 2  ' Right side at steam tube center
+            Dim liquidOutletX = X + 0.5 * Width  ' Bottom center
+
+            ' Create 7 input connectors (6 material streams + 1 energy stream)
+            ' All inlet connectors on left side
             For i As Integer = 0 To 5
                 If GraphicObject.InputConnectors.Count <= i Then
                     Dim portIn As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
                     portIn.IsEnergyConnector = False
                     portIn.Type = Interfaces.Enums.GraphicObjects.ConType.ConIn
-                    portIn.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + (i + 1) * GraphicObject.Height / 7)
+                    portIn.Position = New DWSIM.DrawingTools.Point.Point(vesselLeft, inletY)
                     portIn.ConnectorName = "Inlet " & (i + 1).ToString()
+                    portIn.Direction = Interfaces.Enums.GraphicObjects.ConDir.Right
                     GraphicObject.InputConnectors.Add(portIn)
                 End If
             Next
 
-            ' Input 6: Energy stream
+            ' Input 6: Energy stream (bottom left)
             If GraphicObject.InputConnectors.Count <= 6 Then
                 Dim portEnergy As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
                 portEnergy.IsEnergyConnector = True
                 portEnergy.Type = Interfaces.Enums.GraphicObjects.ConType.ConEn
-                portEnergy.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + GraphicObject.Height)
+                portEnergy.Position = New DWSIM.DrawingTools.Point.Point(vesselLeft, Y + Height)
                 portEnergy.ConnectorName = "Energy"
+                portEnergy.Direction = Interfaces.Enums.GraphicObjects.ConDir.Up
                 GraphicObject.InputConnectors.Add(portEnergy)
             End If
 
-            ' Create 4 output connectors to match DWSIM Vessel
-            ' Output 0: Vapor outlet
+            ' Create 4 output connectors (only 2 used for geothermal separator)
+            ' Output 0: Steam outlet (right side at steam tube exit)
             If GraphicObject.OutputConnectors.Count < 1 Then
-                Dim portVapor As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
-                portVapor.IsEnergyConnector = False
-                portVapor.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
-                portVapor.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width / 2, GraphicObject.Y)
-                portVapor.ConnectorName = "Vapor Out"
-                GraphicObject.OutputConnectors.Add(portVapor)
+                Dim portSteam As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
+                portSteam.IsEnergyConnector = False
+                portSteam.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
+                portSteam.Position = New DWSIM.DrawingTools.Point.Point(vesselRight, steamOutletY)
+                portSteam.ConnectorName = "Steam Out"
+                portSteam.Direction = Interfaces.Enums.GraphicObjects.ConDir.Right
+                GraphicObject.OutputConnectors.Add(portSteam)
             End If
 
-            ' Output 1: Liquid 1 outlet
+            ' Output 1: Liquid outlet (bottom center)
             If GraphicObject.OutputConnectors.Count < 2 Then
-                Dim portLiquid1 As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
-                portLiquid1.IsEnergyConnector = False
-                portLiquid1.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
-                portLiquid1.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height * 0.6)
-                portLiquid1.ConnectorName = "Liquid 1 Out"
-                GraphicObject.OutputConnectors.Add(portLiquid1)
+                Dim portLiquid As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
+                portLiquid.IsEnergyConnector = False
+                portLiquid.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
+                portLiquid.Position = New DWSIM.DrawingTools.Point.Point(liquidOutletX, Y + Height)
+                portLiquid.ConnectorName = "Brine Out"
+                portLiquid.Direction = Interfaces.Enums.GraphicObjects.ConDir.Down
+                GraphicObject.OutputConnectors.Add(portLiquid)
             End If
 
-            ' Output 2: Liquid 2 outlet
+            ' Output 2: Not used but required for Vessel compatibility
             If GraphicObject.OutputConnectors.Count < 3 Then
                 Dim portLiquid2 As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
                 portLiquid2.IsEnergyConnector = False
                 portLiquid2.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
-                portLiquid2.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height * 0.8)
+                portLiquid2.Position = New DWSIM.DrawingTools.Point.Point(liquidOutletX, Y + Height)
                 portLiquid2.ConnectorName = "Liquid 2 Out"
+                portLiquid2.Direction = Interfaces.Enums.GraphicObjects.ConDir.Down
                 GraphicObject.OutputConnectors.Add(portLiquid2)
             End If
 
-            ' Output 3: Recirculation outlet (for dynamic mode)
+            ' Output 3: Not used but required for Vessel compatibility
             If GraphicObject.OutputConnectors.Count < 4 Then
                 Dim portRecirc As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
                 portRecirc.IsEnergyConnector = False
                 portRecirc.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
-                portRecirc.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height)
+                portRecirc.Position = New DWSIM.DrawingTools.Point.Point(liquidOutletX, Y + Height)
                 portRecirc.ConnectorName = "Recirculation"
+                portRecirc.Direction = Interfaces.Enums.GraphicObjects.ConDir.Down
                 GraphicObject.OutputConnectors.Add(portRecirc)
             End If
 
-            ' Update connector positions based on current graphic object position
+            ' Update connector positions (always update to handle moves/resizes)
+            ' Recalculate positions based on current graphic object location
+            vesselLeft = GraphicObject.X + 0.3 * GraphicObject.Width
+            vesselRight = GraphicObject.X + 0.7 * GraphicObject.Width
+            vesselWidth = vesselRight - vesselLeft
+            tubeWidth = 0.15 * vesselWidth
+            bendStartY = GraphicObject.Y + 0.58 * GraphicObject.Height
+            inletY = GraphicObject.Y + 0.4 * GraphicObject.Height
+            steamOutletY = bendStartY + tubeWidth / 2
+            liquidOutletX = GraphicObject.X + 0.5 * GraphicObject.Width
+
+            ' Update input connector positions (all at vessel left wall)
             For i As Integer = 0 To 5
                 If GraphicObject.InputConnectors.Count > i Then
-                    GraphicObject.InputConnectors(i).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + (i + 1) * GraphicObject.Height / 7)
+                    GraphicObject.InputConnectors(i).Position = New DWSIM.DrawingTools.Point.Point(vesselLeft, inletY)
+                    GraphicObject.InputConnectors(i).Direction = Interfaces.Enums.GraphicObjects.ConDir.Right
                 End If
             Next
+
+            ' Energy connector (at bottom)
             If GraphicObject.InputConnectors.Count > 6 Then
-                GraphicObject.InputConnectors(6).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + GraphicObject.Height)
+                GraphicObject.InputConnectors(6).Position = New DWSIM.DrawingTools.Point.Point(vesselLeft, GraphicObject.Y + GraphicObject.Height)
+                GraphicObject.InputConnectors(6).Direction = Interfaces.Enums.GraphicObjects.ConDir.Up
             End If
+
+            ' Output connectors
+            ' Steam outlet (right side at steam tube exit)
             If GraphicObject.OutputConnectors.Count > 0 Then
-                GraphicObject.OutputConnectors(0).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width / 2, GraphicObject.Y)
+                GraphicObject.OutputConnectors(0).Position = New DWSIM.DrawingTools.Point.Point(vesselRight, steamOutletY)
+                GraphicObject.OutputConnectors(0).Direction = Interfaces.Enums.GraphicObjects.ConDir.Right
             End If
+            ' Brine/Liquid outlet (bottom center)
             If GraphicObject.OutputConnectors.Count > 1 Then
-                GraphicObject.OutputConnectors(1).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height * 0.6)
+                GraphicObject.OutputConnectors(1).Position = New DWSIM.DrawingTools.Point.Point(liquidOutletX, GraphicObject.Y + GraphicObject.Height)
+                GraphicObject.OutputConnectors(1).Direction = Interfaces.Enums.GraphicObjects.ConDir.Down
             End If
+            ' Hidden connectors for compatibility (positioned at bottom)
             If GraphicObject.OutputConnectors.Count > 2 Then
-                GraphicObject.OutputConnectors(2).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height * 0.8)
+                GraphicObject.OutputConnectors(2).Position = New DWSIM.DrawingTools.Point.Point(liquidOutletX, GraphicObject.Y + GraphicObject.Height)
+                GraphicObject.OutputConnectors(2).Direction = Interfaces.Enums.GraphicObjects.ConDir.Down
             End If
             If GraphicObject.OutputConnectors.Count > 3 Then
-                GraphicObject.OutputConnectors(3).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height)
+                GraphicObject.OutputConnectors(3).Position = New DWSIM.DrawingTools.Point.Point(liquidOutletX, GraphicObject.Y + GraphicObject.Height)
+                GraphicObject.OutputConnectors(3).Direction = Interfaces.Enums.GraphicObjects.ConDir.Down
             End If
         End Sub
 
