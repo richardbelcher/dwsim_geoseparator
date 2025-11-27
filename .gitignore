@@ -1,0 +1,17 @@
+# Build results
+bin/
+obj/
+*.dll
+*.pdb
+*.exe
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# DWSIM output
+*.log
+
+# Original files from clone
+*_original.vb

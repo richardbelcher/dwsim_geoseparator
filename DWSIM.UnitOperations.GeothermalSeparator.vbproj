@@ -1,0 +1,108 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Language>VB</Language>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyTitle>DWSIM Geothermal Separator</AssemblyTitle>
+    <AssemblyDescription>Geothermal separator unit operation plugin for DWSIM based on Lazalde-Crabtree method</AssemblyDescription>
+    <AssemblyCompany>MTL Geothermal</AssemblyCompany>
+    <AssemblyProduct>DWSIM.GeothermalSeparator</AssemblyProduct>
+    <AssemblyCopyright>Copyright © 2025</AssemblyCopyright>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <AssemblyFileVersion>1.0.0.0</AssemblyFileVersion>
+    <OutputType>Library</OutputType>
+    <RootNamespace>DWSIM.UnitOperations</RootNamespace>
+    <AssemblyName>DWSIM.UnitOperations.GeothermalSeparator</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <MyType>Empty</MyType>
+    <OptionStrict>Off</OptionStrict>
+    <OptionExplicit>On</OptionExplicit>
+    <OptionCompare>Binary</OptionCompare>
+    <OptionInfer>On</OptionInfer>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>$(LOCALAPPDATA)\DWSIM\unitops\</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="DWSIM.Thermodynamics">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.Thermodynamics.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.UnitOperations">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.UnitOperations.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.SharedClasses">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.SharedClasses.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.MathOps">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.MathOps.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DWSIM.Interfaces">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.Interfaces.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="CapeOpen">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\CapeOpen.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="WeifenLuo.WinFormsUI.Docking">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\WeifenLuo.WinFormsUI.Docking.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="UnitOperations\GeothermalSeparator.vb" />
+    <Compile Include="EditingForms\EditingForm_GeothermalSeparator.vb">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="EditingForms\EditingForm_GeothermalSeparator.Designer.vb">
+      <DependentUpon>EditingForm_GeothermalSeparator.vb</DependentUpon>
+    </Compile>
+    <Compile Include="My Project\Resources.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="My Project\Resources.resx">
+      <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.vb</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>
