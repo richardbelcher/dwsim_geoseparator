@@ -745,17 +745,31 @@ Namespace UnitOperations
         End Sub
 
         Public Sub CreateConnectors() Implements IExternalUnitOperation.CreateConnectors
-            ' Inlet connector (material stream)
-            If GraphicObject.InputConnectors.Count = 0 Then
-                Dim portIn As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
-                portIn.IsEnergyConnector = False
-                portIn.Type = Interfaces.Enums.GraphicObjects.ConType.ConIn
-                portIn.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + GraphicObject.Height / 2)
-                portIn.ConnectorName = "Inlet"
-                GraphicObject.InputConnectors.Add(portIn)
+            ' Create 7 input connectors (6 material streams + 1 energy stream) to match DWSIM Vessel
+            ' Input 0-5: Material streams
+            For i As Integer = 0 To 5
+                If GraphicObject.InputConnectors.Count <= i Then
+                    Dim portIn As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
+                    portIn.IsEnergyConnector = False
+                    portIn.Type = Interfaces.Enums.GraphicObjects.ConType.ConIn
+                    portIn.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + (i + 1) * GraphicObject.Height / 7)
+                    portIn.ConnectorName = "Inlet " & (i + 1).ToString()
+                    GraphicObject.InputConnectors.Add(portIn)
+                End If
+            Next
+
+            ' Input 6: Energy stream
+            If GraphicObject.InputConnectors.Count <= 6 Then
+                Dim portEnergy As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
+                portEnergy.IsEnergyConnector = True
+                portEnergy.Type = Interfaces.Enums.GraphicObjects.ConType.ConEn
+                portEnergy.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + GraphicObject.Height)
+                portEnergy.ConnectorName = "Energy"
+                GraphicObject.InputConnectors.Add(portEnergy)
             End If
 
-            ' Vapor outlet connector
+            ' Create 4 output connectors to match DWSIM Vessel
+            ' Output 0: Vapor outlet
             If GraphicObject.OutputConnectors.Count < 1 Then
                 Dim portVapor As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
                 portVapor.IsEnergyConnector = False
@@ -765,25 +779,56 @@ Namespace UnitOperations
                 GraphicObject.OutputConnectors.Add(portVapor)
             End If
 
-            ' Liquid outlet connector
+            ' Output 1: Liquid 1 outlet
             If GraphicObject.OutputConnectors.Count < 2 Then
-                Dim portLiquid As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
-                portLiquid.IsEnergyConnector = False
-                portLiquid.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
-                portLiquid.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height)
-                portLiquid.ConnectorName = "Liquid Out"
-                GraphicObject.OutputConnectors.Add(portLiquid)
+                Dim portLiquid1 As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
+                portLiquid1.IsEnergyConnector = False
+                portLiquid1.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
+                portLiquid1.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height * 0.6)
+                portLiquid1.ConnectorName = "Liquid 1 Out"
+                GraphicObject.OutputConnectors.Add(portLiquid1)
             End If
 
-            ' Update positions
-            If GraphicObject.InputConnectors.Count > 0 Then
-                GraphicObject.InputConnectors(0).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + GraphicObject.Height / 2)
+            ' Output 2: Liquid 2 outlet
+            If GraphicObject.OutputConnectors.Count < 3 Then
+                Dim portLiquid2 As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
+                portLiquid2.IsEnergyConnector = False
+                portLiquid2.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
+                portLiquid2.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height * 0.8)
+                portLiquid2.ConnectorName = "Liquid 2 Out"
+                GraphicObject.OutputConnectors.Add(portLiquid2)
+            End If
+
+            ' Output 3: Recirculation outlet (for dynamic mode)
+            If GraphicObject.OutputConnectors.Count < 4 Then
+                Dim portRecirc As New Drawing.SkiaSharp.GraphicObjects.ConnectionPoint()
+                portRecirc.IsEnergyConnector = False
+                portRecirc.Type = Interfaces.Enums.GraphicObjects.ConType.ConOut
+                portRecirc.Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height)
+                portRecirc.ConnectorName = "Recirculation"
+                GraphicObject.OutputConnectors.Add(portRecirc)
+            End If
+
+            ' Update connector positions based on current graphic object position
+            For i As Integer = 0 To 5
+                If GraphicObject.InputConnectors.Count > i Then
+                    GraphicObject.InputConnectors(i).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + (i + 1) * GraphicObject.Height / 7)
+                End If
+            Next
+            If GraphicObject.InputConnectors.Count > 6 Then
+                GraphicObject.InputConnectors(6).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X, GraphicObject.Y + GraphicObject.Height)
             End If
             If GraphicObject.OutputConnectors.Count > 0 Then
                 GraphicObject.OutputConnectors(0).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width / 2, GraphicObject.Y)
             End If
             If GraphicObject.OutputConnectors.Count > 1 Then
-                GraphicObject.OutputConnectors(1).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height)
+                GraphicObject.OutputConnectors(1).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height * 0.6)
+            End If
+            If GraphicObject.OutputConnectors.Count > 2 Then
+                GraphicObject.OutputConnectors(2).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height * 0.8)
+            End If
+            If GraphicObject.OutputConnectors.Count > 3 Then
+                GraphicObject.OutputConnectors(3).Position = New DWSIM.DrawingTools.Point.Point(GraphicObject.X + GraphicObject.Width, GraphicObject.Y + GraphicObject.Height)
             End If
         End Sub
 
