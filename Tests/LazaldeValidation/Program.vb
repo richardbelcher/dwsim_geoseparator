@@ -508,6 +508,11 @@ Module TestLazaldeCrabtreePaperValidation
             Environment.ExitCode = 0
         End If
         Console.WriteLine("========================================")
+
+        ' Run drop diameter analysis to explain the discrepancy
+        Console.WriteLine()
+        Console.WriteLine()
+        DropDiameterAnalysis.RunAnalysis()
     End Sub
 
 End Module
