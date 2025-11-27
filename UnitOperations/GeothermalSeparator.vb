@@ -639,13 +639,13 @@ Namespace UnitOperations
 
             If f Is Nothing Then
                 f = New EditingForm_GeothermalSeparator With {.SeparatorObject = Me}
-                f.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.Float
+                f.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockLeft
                 f.Tag = "ObjectEditor"
                 Me.FlowSheet.DisplayForm(f)
             Else
                 If f.IsDisposed Then
                     f = New EditingForm_GeothermalSeparator With {.SeparatorObject = Me}
-                    f.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.Float
+                    f.ShowHint = WeifenLuo.WinFormsUI.Docking.DockState.DockLeft
                     f.Tag = "ObjectEditor"
                     Me.FlowSheet.DisplayForm(f)
                 Else
@@ -658,7 +658,12 @@ Namespace UnitOperations
         Public Overrides Sub UpdateEditForm()
             If f IsNot Nothing Then
                 If Not f.IsDisposed Then
-                    f.UpdateInfo()
+                    ' Thread-safe UI update using Invoke
+                    If f.InvokeRequired Then
+                        f.BeginInvoke(Sub() f.UpdateInfo())
+                    Else
+                        f.UpdateInfo()
+                    End If
                 End If
             End If
         End Sub
