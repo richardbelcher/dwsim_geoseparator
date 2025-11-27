@@ -802,12 +802,12 @@ Namespace UnitOperations
                             gradPen.IsStroke = False
                             gradPen.IsAntialias = True
 
-                            ' Vessel body dimensions (taller vessel - double height ratio)
-                            Dim vesselLeft = X + 0.3 * Width
-                            Dim vesselRight = X + 0.7 * Width
+                            ' Vessel body dimensions (same width as original, 50% taller)
+                            Dim vesselLeft = X + 0.25 * Width
+                            Dim vesselRight = X + 0.75 * Width
                             Dim vesselWidth = vesselRight - vesselLeft
 
-                            ' Main body rectangle (taller proportions)
+                            ' Main body rectangle (taller proportions - 50% longer than original)
                             Dim bodyRect As New SkiaSharp.SKRect(vesselLeft, Y + 0.1 * Height, vesselRight, Y + 0.9 * Height)
                             canvas.DrawRect(bodyRect, gradPen)
                             canvas.DrawRect(bodyRect, myPen)
@@ -869,9 +869,9 @@ Namespace UnitOperations
             Dim Width = GraphicObject.Width
             Dim Height = GraphicObject.Height
 
-            ' Vessel body dimensions (must match Draw method - taller vessel)
-            Dim vesselLeft = X + 0.3 * Width
-            Dim vesselRight = X + 0.7 * Width
+            ' Vessel body dimensions (must match Draw method - same width as original)
+            Dim vesselLeft = X + 0.25 * Width
+            Dim vesselRight = X + 0.75 * Width
             Dim vesselWidth = vesselRight - vesselLeft
 
             ' Steam tube parameters (must match Draw method)
@@ -955,8 +955,8 @@ Namespace UnitOperations
 
             ' Update connector positions (always update to handle moves/resizes)
             ' Recalculate positions based on current graphic object location
-            vesselLeft = GraphicObject.X + 0.3 * GraphicObject.Width
-            vesselRight = GraphicObject.X + 0.7 * GraphicObject.Width
+            vesselLeft = GraphicObject.X + 0.25 * GraphicObject.Width
+            vesselRight = GraphicObject.X + 0.75 * GraphicObject.Width
             vesselWidth = vesselRight - vesselLeft
             tubeWidth = 0.15 * vesselWidth
             bendStartY = GraphicObject.Y + 0.58 * GraphicObject.Height
