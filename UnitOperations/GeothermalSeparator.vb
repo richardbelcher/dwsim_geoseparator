@@ -1291,6 +1291,13 @@ Namespace UnitOperations
 
         ''' <summary>
         ''' Calculates drop diameter using modified Nukiyama-Tanasawa equation
+        ''' Reference: Lazalde-Crabtree (1984), Eq. 23, Table 4
+        ''' Reference: Zarrouk & Purnanto (2014), Eq. 23, Table 4
+        '''
+        ''' d_w = (66.2898/v_t^a) × √(σ_L/ρ_L) + B × 1357.35 × [μ_L²/(σ_L×ρ_L)]^0.225 × (Q_L/Q_VS)^0.5507 × v_t^e
+        '''
+        ''' Units: ρ_L in g/cm³, v_t in m/s, σ_L in dyne/cm, μ_L in poise, Q_L and Q_VS in m³/s
+        ''' Output: d_w in microns
         ''' </summary>
         ''' <param name="V_T">Inlet steam velocity [m/s]</param>
         ''' <param name="Q_VS">Steam volumetric flow [m³/s]</param>
@@ -1299,45 +1306,65 @@ Namespace UnitOperations
         ''' <param name="sigma_L">Surface tension [N/m]</param>
         ''' <param name="mu_L">Water viscosity [Pa·s]</param>
         ''' <param name="flowPattern">Flow pattern</param>
-        ''' <param name="X_s">Inlet steam quality</param>
+        ''' <param name="X_i">Inlet steam quality (mass fraction vapor)</param>
         ''' <returns>Drop diameter [microns]</returns>
         Private Function CalculateDropDiameter(V_T As Double, Q_VS As Double, Q_L As Double,
                                                 rho_L As Double, sigma_L As Double, mu_L As Double,
-                                                flowPattern As FlowPatterns, X_s As Double) As Double
-            ' Constants from Lazalde-Crabtree
+                                                flowPattern As FlowPatterns, X_i As Double) As Double
+            ' Constants from Lazalde-Crabtree (1984) Eq. 23
             Const A As Double = 66.2898
             Const K As Double = 1357.35
-            Const b As Double = 0.225
-            Const c As Double = 0.5507
+            Const b As Double = 0.2250   ' Exponent for viscosity term
+            Const c As Double = 0.5507   ' Exponent for flow ratio term
 
-            ' Flow-pattern dependent constants
-            Dim a_const As Double
-            Dim B_const As Double
-            Dim e_const As Double
+            ' Flow-pattern dependent constants from Table 4 (Zarrouk & Purnanto 2014)
+            ' IMPORTANT: B is calculated as B_coeff × (Xi)^B_exp
+            ' The 'a' is exponent for v_t in first term (denominator)
+            ' The 'e' is exponent for v_t in last term
+            Dim a_exp As Double      ' Exponent 'a' for v_t in first term
+            Dim B_coeff As Double    ' Coefficient for B
+            Dim B_exp As Double      ' Exponent for Xi in B calculation
+            Dim e_exp As Double      ' Exponent 'e' for v_t in last term
+
+            ' Prevent Xi from being zero (causes issues with negative exponents)
+            If X_i < 0.001 Then X_i = 0.001
+            If X_i > 0.999 Then X_i = 0.999
 
             Select Case flowPattern
                 Case FlowPatterns.Stratified
-                    a_const = 0.5436
-                    B_const = 94.9042 * X_s
-                    e_const = -0.4538
+                    ' Stratified and wavy flow
+                    a_exp = 0.5436
+                    B_coeff = 94.9042
+                    B_exp = -0.4538      ' Xi^(-0.4538)
+                    e_exp = 0.0253
                 Case FlowPatterns.Annular
-                    a_const = 0.8069
-                    B_const = 198.7749 * X_s
-                    e_const = 0.2628
+                    ' Annular flow
+                    a_exp = 0.8069
+                    B_coeff = 198.7749
+                    B_exp = 0.2628       ' Xi^0.2628
+                    e_exp = -0.2188
                 Case FlowPatterns.Dispersed
-                    a_const = 0.8069
-                    B_const = 140.8346 * X_s
-                    e_const = 0.5747
+                    ' Dispersed and bubble flow
+                    a_exp = 0.8069
+                    B_coeff = 140.8346
+                    B_exp = 0.5747       ' Xi^0.5747
+                    e_exp = -0.2188
                 Case FlowPatterns.PlugSlug
-                    a_const = 0.5436
-                    B_const = 37.3618 * X_s
-                    e_const = -0.0000688
+                    ' Plug and slug flow
+                    a_exp = 0.5436
+                    B_coeff = 37.3618
+                    B_exp = -0.0000688   ' Xi^(-0.0000688) ≈ 1.0
+                    e_exp = 0.0253
                 Case Else
-                    ' Default to annular
-                    a_const = 0.8069
-                    B_const = 198.7749 * X_s
-                    e_const = 0.2628
+                    ' Default to annular (most common in geothermal)
+                    a_exp = 0.8069
+                    B_coeff = 198.7749
+                    B_exp = 0.2628
+                    e_exp = -0.2188
             End Select
+
+            ' Calculate B using Xi as exponent (NOT multiplier!)
+            Dim B_const As Double = B_coeff * Math.Pow(X_i, B_exp)
 
             ' Convert units for formula:
             ' ρ_L in g/cm³, σ_L in dyne/cm, μ_L in poise
@@ -1348,38 +1375,48 @@ Namespace UnitOperations
             ' Prevent division by zero
             If V_T < 0.1 Then V_T = 0.1
             If Q_VS < 0.0001 Then Q_VS = 0.0001
+            If Q_L < 0.0000001 Then Q_L = 0.0000001
             If rho_L_cgs < 0.001 Then rho_L_cgs = 0.001
             If sigma_L_cgs < 0.001 Then sigma_L_cgs = 0.001
             If mu_L_cgs < 0.00001 Then mu_L_cgs = 0.00001
 
-            ' Nukiyama-Tanasawa equation (output in microns)
-            Dim term1 As Double = (A / Math.Pow(V_T, a_const)) * Math.Sqrt(sigma_L_cgs / rho_L_cgs)
-            Dim term2 As Double = B_const * K * Math.Pow(mu_L_cgs * mu_L_cgs / (sigma_L_cgs * rho_L_cgs), b)
-            Dim term3 As Double = Math.Pow(Q_L / Q_VS, c) * Math.Pow(V_T, e_const)
+            ' Nukiyama-Tanasawa equation (Eq. 23)
+            ' Term 1: (66.2898/v_t^a) × √(σ_L/ρ_L)
+            Dim term1 As Double = (A / Math.Pow(V_T, a_exp)) * Math.Sqrt(sigma_L_cgs / rho_L_cgs)
 
-            Dim d_w As Double = term1 + term2 * term3
+            ' Term 2: B × 1357.35 × [μ_L²/(σ_L×ρ_L)]^0.225 × (Q_L/Q_VS)^0.5507 × v_t^e
+            Dim viscosity_term As Double = Math.Pow(mu_L_cgs * mu_L_cgs / (sigma_L_cgs * rho_L_cgs), b)
+            Dim flow_ratio_term As Double = Math.Pow(Q_L / Q_VS, c)
+            Dim velocity_term As Double = Math.Pow(V_T, e_exp)
+            Dim term2 As Double = B_const * K * viscosity_term * flow_ratio_term * velocity_term
 
-            ' Ensure reasonable bounds (1-1000 microns)
+            Dim d_w As Double = term1 + term2
+
+            ' Ensure reasonable bounds (1-2000 microns for geothermal applications)
             If d_w < 1 Then d_w = 1
-            If d_w > 1000 Then d_w = 1000
+            If d_w > 2000 Then d_w = 2000
 
             Return d_w
         End Function
 
         ''' <summary>
         ''' Calculates centrifugal separation efficiency (eta_m)
+        ''' Reference: Lazalde-Crabtree (1984), Eqs. 14-21
+        ''' Reference: Zarrouk & Purnanto (2014), Eqs. 14-21, Fig. 11
+        '''
+        ''' η_m = 1 - exp[-2(ψ'C)^(1/(2n+2))]
         ''' </summary>
         ''' <param name="D">Vessel diameter [m]</param>
         ''' <param name="D_e">Steam outlet diameter [m]</param>
         ''' <param name="A_o">Inlet area [m²]</param>
         ''' <param name="u">Tangential velocity [m/s]</param>
-        ''' <param name="d_w">Drop diameter [m]</param>
+        ''' <param name="d_w">Drop diameter [microns]</param>
         ''' <param name="rho_L">Water density [kg/m³]</param>
         ''' <param name="mu_V">Steam viscosity [Pa·s]</param>
         ''' <param name="T">Temperature [°C]</param>
         ''' <param name="Q_VS">Steam volumetric flow [m³/s]</param>
         ''' <param name="Z">Total height [m]</param>
-        ''' <param name="alpha">Lip position [m]</param>
+        ''' <param name="alpha">Lip position [m] (negative = inside domed head)</param>
         ''' <returns>Centrifugal efficiency (0-1)</returns>
         Private Function CalculateCentrifugalEfficiency(D As Double, D_e As Double, A_o As Double,
                                                          u As Double, d_w As Double, rho_L As Double,
@@ -1393,44 +1430,57 @@ Namespace UnitOperations
             ' Convert drop diameter from microns to meters
             Dim d_w_m As Double = d_w * 0.000001
 
-            ' Calculate exponent n
+            ' Calculate exponent n using Eq. 16
+            ' (1-n₁)/(1-n) = (294.3/(T+273.2))^0.3 where n₁ = 0.6689 × D^0.14
             Dim n1 As Double = 0.6689 * Math.Pow(D, 0.14)
             Dim T_K As Double = T + 273.15
-            Dim n As Double = 1 - (1 - n1) * Math.Pow(294.3 / T_K, 0.3)
+            Dim temp_ratio As Double = Math.Pow(294.3 / T_K, 0.3)
+            Dim n As Double = 1 - (1 - n1) / temp_ratio
 
-            ' Calculate separator volumes
-            ' VO_S = (π/4) × (D² - A_o) × Z
-            Dim VO_S As Double = (Math.PI / 4) * (D * D - A_o) * Z
+            ' Calculate separator volumes per Fig. 11 (Zarrouk & Purnanto 2014)
+            ' V_OS = Annular volume in main cylindrical section (between outer wall and inner tube)
+            ' V_OS = π/4 × (D² - D_e²) × Z
+            Dim V_OS As Double = (Math.PI / 4) * (D * D - D_e * D_e) * Z
 
-            ' Head volumes (ASME flanged & dished)
-            ' VO₁ = (π×D²/4) × α
-            Dim VO_1 As Double = (Math.PI * D * D / 4) * Math.Abs(alpha)
-            ' VO₂ = 0.081 × D³
-            Dim VO_2 As Double = 0.081 * D * D * D
-            ' VO₃ = (π×D_e²/4) × (α + 0.169×D)
-            Dim VO_3 As Double = (Math.PI * D_e * D_e / 4) * (Math.Abs(alpha) + 0.169 * D)
+            ' V_OH = Volume in upper head region (imaginary extension of inner vessel)
+            ' From Fig. 11: V_OH includes domed head volume minus steam outlet tube volume
+            ' Approximate for ASME flanged & dished head:
+            ' V_head ≈ 0.081 × D³ (empirical for 2:1 ellipsoidal head)
+            ' V_tube_in_head = π/4 × D_e² × (|α| + 0.169×D) where 0.169D is head rise
+            Dim abs_alpha As Double = Math.Abs(alpha)
+            Dim head_rise As Double = 0.169 * D  ' Approximate head rise for 2:1 ellipsoidal
+            Dim V_head As Double = 0.081 * D * D * D
+            Dim V_tube_in_head As Double = (Math.PI / 4) * D_e * D_e * (abs_alpha + head_rise)
+            Dim V_OH As Double = V_head - V_tube_in_head
 
-            Dim VO_H As Double = VO_1 + VO_2 - VO_3
+            ' Ensure positive volumes
+            If V_OS < 0 Then V_OS = 0.001
+            If V_OH < 0 Then V_OH = 0.001
 
-            ' Residence times
+            ' Residence times (Eqs. 18-20)
             If Q_VS < 0.0001 Then Q_VS = 0.0001
-            Dim t_mi As Double = VO_S / Q_VS   ' Minimum residence time [s]
-            Dim t_ma As Double = VO_H / Q_VS   ' Additional time in head [s]
-            Dim t_r As Double = t_mi + t_ma / 2.0  ' Total residence time [s]
+            Dim t_mi As Double = V_OS / Q_VS   ' Minimum residence time [s] (Eq. 19)
+            Dim t_ma As Double = V_OH / Q_VS   ' Maximum additional time in head [s] (Eq. 20)
+            Dim t_r As Double = t_mi + t_ma / 2.0  ' Total residence time [s] (Eq. 18)
 
-            ' K_c parameter
+            ' K_c parameter (Eq. 17)
+            ' K_c = t_r × Q_VS / D³
             Dim K_c As Double = t_r * Q_VS / (D * D * D)
 
-            ' C parameter
+            ' C parameter (Eq. 15)
+            ' C = 8 × K_c × D² / A_o
             Dim C As Double = 8 * K_c * D * D / A_o
 
-            ' Psi parameter
+            ' Centrifugal inertia impaction parameter ψ' (Eq. 21)
+            ' ψ' = ρ_w × d_w² × (n+1) × u / (18 × μ_v × D)
             If mu_V < 0.000001 Then mu_V = 0.000001
             Dim psi As Double = (rho_L * d_w_m * d_w_m * (n + 1) * u) / (18 * mu_V * D)
 
-            ' Centrifugal efficiency
-            Dim exponent As Double = 2 * Math.Pow(psi * C, 1.0 / (2 * n + 2))
-            Dim eta_m As Double = 1 - Math.Exp(-exponent)
+            ' Centrifugal efficiency (Eq. 14)
+            ' η_m = 1 - exp[-2(ψ'C)^(1/(2n+2))]
+            Dim exponent As Double = 1.0 / (2 * n + 2)
+            Dim term As Double = 2 * Math.Pow(psi * C, exponent)
+            Dim eta_m As Double = 1 - Math.Exp(-term)
 
             ' Clamp to valid range
             If eta_m < 0 Then eta_m = 0
@@ -1576,15 +1626,27 @@ Namespace UnitOperations
                 Dim T As Double = MixedStream.Phases(0).Properties.temperature.GetValueOrDefault - 273.15  ' Convert K to °C
                 Dim P As Double = MixedStream.Phases(0).Properties.pressure.GetValueOrDefault
 
-                ' Surface tension - use approximate correlation if not available
-                Dim sigma_L As Double = 0.0728  ' Default water at 20°C
+                ' Surface tension - use Vargaftic et al. (1983) correlation
+                ' Reference: Zarrouk & Purnanto (2014), Eq. 24
+                ' σ = Y × [(Tc - (T+273.15))/Tc]^k × [1 + b×(Tc - (T+273.15))/Tc]
+                ' Where: Tc = 647.15K, Y = 235.8×10^-3 N/m, b = -0.625, k = 1.256
+                Dim sigma_L As Double = 0.0554  ' Default at ~155°C
                 Try
-                    ' Estimate surface tension from temperature (water)
-                    ' σ ≈ 0.0728 × (1 - T/647.1)^1.2 for water
-                    sigma_L = 0.0728 * Math.Pow(1 - (T + 273.15) / 647.1, 1.2)
+                    Const Tc As Double = 647.15      ' Critical temperature [K]
+                    Const Y As Double = 0.2358       ' 235.8×10^-3 N/m
+                    Const b_surf As Double = -0.625  ' Coefficient
+                    Const k_surf As Double = 1.256   ' Exponent
+
+                    Dim T_K As Double = T + 273.15   ' Convert °C to K
+                    If T_K >= Tc Then T_K = Tc - 1   ' Prevent negative under critical point
+
+                    Dim tau As Double = (Tc - T_K) / Tc
+                    sigma_L = Y * Math.Pow(tau, k_surf) * (1 + b_surf * tau)
+
                     If sigma_L < 0.001 Then sigma_L = 0.001
+                    If sigma_L > 0.076 Then sigma_L = 0.076  ' Max at 0°C
                 Catch
-                    sigma_L = 0.0728
+                    sigma_L = 0.0554  ' Fallback to ~155°C value
                 End Try
 
                 ' Calculate inlet steam quality
