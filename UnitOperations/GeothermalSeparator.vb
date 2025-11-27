@@ -58,6 +58,34 @@ Namespace UnitOperations
             Legacy = 1
         End Enum
 
+        ''' <summary>
+        ''' Separator equipment type: Separator (X_i less than 95%) or Dryer (X_i greater than 95%)
+        ''' </summary>
+        Public Enum SeparatorType
+            Separator = 0  ' Inlet quality < 95%, rectangular spiral inlet
+            Dryer = 1      ' Inlet quality > 95%, circular tangential inlet
+        End Enum
+
+        ''' <summary>
+        ''' Sizing mode for separator design
+        ''' </summary>
+        Public Enum SizingModes
+            AutoSize = 0   ' Calculate D_t from design velocity and steam flow
+            Rating = 1     ' User specifies D_t, calculate actual performance
+            Design = 2     ' User specifies target quality, iterate to find D_t
+        End Enum
+
+        ''' <summary>
+        ''' Two-phase flow pattern (Baker's method)
+        ''' </summary>
+        Public Enum FlowPatterns
+            Auto = 0           ' Automatically detect from Baker chart
+            Stratified = 1     ' Stratified/Wavy flow
+            Annular = 2        ' Annular flow
+            Dispersed = 3      ' Dispersed/Bubble flow
+            PlugSlug = 4       ' Plug/Slug flow
+        End Enum
+
         Public Property CalculationMode As CalculationModes = CalculationModes.Adiabatic
 
         Public Property DimensionRatio As Double = 3.3
@@ -77,6 +105,161 @@ Namespace UnitOperations
         Public Property FlashTemperature As Double = 298.15
 
         Public Property DeltaQ As Nullable(Of Double)
+
+#Region "Lazalde-Crabtree Properties"
+
+        ' === INPUT PROPERTIES ===
+
+        ''' <summary>
+        ''' Equipment type: Separator or Dryer
+        ''' </summary>
+        Public Property EquipmentType As SeparatorType = SeparatorType.Separator
+
+        ''' <summary>
+        ''' Sizing mode: AutoSize, Rating, or Design
+        ''' </summary>
+        Public Property SizingMode As SizingModes = SizingModes.AutoSize
+
+        ''' <summary>
+        ''' Two-phase flow pattern for drop diameter calculation
+        ''' </summary>
+        Public Property FlowPattern As FlowPatterns = FlowPatterns.Auto
+
+        ''' <summary>
+        ''' Inlet pipe diameter D_t [m] - used in Rating mode
+        ''' </summary>
+        Public Property InletPipeDiameter As Double = 0.3
+
+        ''' <summary>
+        ''' Design steam velocity V_T [m/s]
+        ''' Recommended: 25-45 for separator, 35-60 for dryer
+        ''' </summary>
+        Public Property DesignSteamVelocity As Double = 35.0
+
+        ''' <summary>
+        ''' Target outlet steam quality (used in Design mode)
+        ''' </summary>
+        Public Property TargetOutletQuality As Double = 0.9995
+
+        ' === DIMENSIONAL PROPERTIES (Calculated) ===
+
+        ''' <summary>
+        ''' Vessel diameter D [m] = 3.3×D_t (sep) or 3.5×D_t (dryer)
+        ''' </summary>
+        Public Property VesselDiameter As Double
+
+        ''' <summary>
+        ''' Steam outlet diameter D_e [m] = 1.0×D_t
+        ''' </summary>
+        Public Property SteamOutletDiameter As Double
+
+        ''' <summary>
+        ''' Water outlet diameter D_b [m] = 1.0×D_t
+        ''' </summary>
+        Public Property WaterOutletDiameter As Double
+
+        ''' <summary>
+        ''' Lip position alpha [m] = -0.15×D_t (negative = inside head)
+        ''' </summary>
+        Public Property LipPosition As Double
+
+        ''' <summary>
+        ''' Cyclone height beta [m] = 3.5×D_t (sep) or 3.0×D_t (dryer)
+        ''' </summary>
+        Public Property CycloneHeight As Double
+
+        ''' <summary>
+        ''' Total height Z [m] = 5.5×D_t (sep) or 4.0×D_t (dryer)
+        ''' </summary>
+        Public Property TotalHeight As Double
+
+        ''' <summary>
+        ''' Inlet area A_o [m²]
+        ''' </summary>
+        Public Property InletArea As Double
+
+        ' === VELOCITY PROPERTIES (Calculated) ===
+
+        ''' <summary>
+        ''' Actual inlet steam velocity V_T [m/s]
+        ''' </summary>
+        Public Property ActualSteamVelocity As Double
+
+        ''' <summary>
+        ''' Inlet tangential velocity u [m/s]
+        ''' </summary>
+        Public Property TangentialVelocity As Double
+
+        ''' <summary>
+        ''' Annular upward velocity V_AN [m/s]
+        ''' </summary>
+        Public Property AnnularVelocity As Double
+
+        ' === EFFICIENCY PROPERTIES (Calculated) ===
+
+        ''' <summary>
+        ''' Inlet steam quality X_i (mass fraction vapor)
+        ''' </summary>
+        Public Property InletSteamQuality As Double
+
+        ''' <summary>
+        ''' Drop diameter d_w [microns] - Nukiyama-Tanasawa
+        ''' </summary>
+        Public Property DropDiameter As Double
+
+        ''' <summary>
+        ''' Detected flow pattern from Baker chart
+        ''' </summary>
+        Public Property DetectedFlowPattern As FlowPatterns
+
+        ''' <summary>
+        ''' Centrifugal efficiency eta_m (0-1)
+        ''' </summary>
+        Public Property CentrifugalEfficiency As Double
+
+        ''' <summary>
+        ''' Entrainment efficiency eta_A (0-1)
+        ''' </summary>
+        Public Property EntrainmentEfficiency As Double
+
+        ''' <summary>
+        ''' Overall separation efficiency eta_ef = eta_m × eta_A (0-1)
+        ''' </summary>
+        Public Property OverallEfficiency As Double
+
+        ''' <summary>
+        ''' Outlet steam quality X_o (0-1)
+        ''' </summary>
+        Public Property OutletSteamQuality As Double
+
+        ''' <summary>
+        ''' Entrainment (water carryover) W_A [kg/s]
+        ''' </summary>
+        Public Property WaterCarryover As Double
+
+        ''' <summary>
+        ''' Separator pressure drop [Pa]
+        ''' </summary>
+        Public Property SeparatorPressureDrop As Double
+
+        ''' <summary>
+        ''' Number of velocity heads N_H for pressure drop
+        ''' </summary>
+        Public Property VelocityHeads As Double
+
+        ' === VALIDATION/WARNING PROPERTIES ===
+
+        ''' <summary>
+        ''' Velocity status message
+        ''' </summary>
+        Public Property VelocityStatus As String = ""
+
+        ''' <summary>
+        ''' True if velocity is within recommended range
+        ''' </summary>
+        Public Property VelocityInRange As Boolean = True
+
+#End Region
 
         Public Sub New()
             MyBase.New()
@@ -501,6 +684,9 @@ Namespace UnitOperations
             Me.wv = MixedStream.Phases(2).Properties.massflow.GetValueOrDefault
             Me.rhoe = MixedStream.Phases(0).Properties.density.GetValueOrDefault
             Me.qe = MixedStream.Phases(0).Properties.volumetric_flow.GetValueOrDefault
+
+            ' Perform Lazalde-Crabtree separation efficiency calculations
+            CalculateLazaldeCrabtree()
 
         End Sub
 
@@ -1007,6 +1193,524 @@ Namespace UnitOperations
 
         Public Sub PopulateEditorPanel(container As Object) Implements IExternalUnitOperation.PopulateEditorPanel
             ' Use default property grid editor
+        End Sub
+
+#End Region
+
+#Region "Lazalde-Crabtree Calculation Methods"
+
+        ''' <summary>
+        ''' Reference constants for Baker flow pattern map
+        ''' </summary>
+        Private Const RHO_AIR As Double = 1.23        ' kg/m³ at 20°C, 1 atm
+        Private Const RHO_WATER As Double = 1000.0    ' kg/m³
+        Private Const SIGMA_WATER As Double = 0.0728  ' N/m (surface tension)
+        Private Const MU_WATER As Double = 0.001      ' Pa·s (viscosity)
+
+        ''' <summary>
+        ''' Detects the two-phase flow pattern using Baker's method
+        ''' </summary>
+        ''' <param name="W_V">Steam mass flow [kg/s]</param>
+        ''' <param name="W_L">Water mass flow [kg/s]</param>
+        ''' <param name="rho_V">Steam density [kg/m³]</param>
+        ''' <param name="rho_L">Water density [kg/m³]</param>
+        ''' <param name="sigma_L">Water surface tension [N/m]</param>
+        ''' <param name="mu_L">Water viscosity [Pa·s]</param>
+        ''' <param name="A_pipe">Pipe cross-sectional area [m²]</param>
+        ''' <returns>Detected flow pattern</returns>
+        Private Function DetectBakerFlowPattern(W_V As Double, W_L As Double,
+                                                 rho_V As Double, rho_L As Double,
+                                                 sigma_L As Double, mu_L As Double,
+                                                 A_pipe As Double) As FlowPatterns
+            ' Calculate mass fluxes [kg/m²·s]
+            Dim G_G As Double = W_V / A_pipe  ' Gas mass flux
+            Dim G_L As Double = W_L / A_pipe  ' Liquid mass flux
+
+            ' Calculate Baker parameters
+            Dim lambda As Double = Math.Sqrt((rho_V / RHO_AIR) * (rho_L / RHO_WATER))
+            Dim psi As Double = (SIGMA_WATER / sigma_L) * Math.Pow((mu_L / MU_WATER) * Math.Pow(RHO_WATER / rho_L, 2), 1.0 / 3.0)
+
+            ' Baker chart coordinates
+            Dim Bx As Double = (G_L / G_G) * (rho_V / RHO_AIR) * Math.Sqrt(rho_L / RHO_WATER)
+            Dim By As Double = G_G / (lambda * psi)
+
+            ' Prevent division issues
+            If Bx <= 0 OrElse Double.IsNaN(Bx) OrElse Double.IsInfinity(Bx) Then
+                Return FlowPatterns.Annular
+            End If
+            If By <= 0 OrElse Double.IsNaN(By) OrElse Double.IsInfinity(By) Then
+                Return FlowPatterns.Stratified
+            End If
+
+            ' Flow regime boundaries (from Baker chart)
+            ' Dispersed/Bubble: By > 5.1 × Bx^0.5 for Bx > 4000
+            If Bx > 4000 AndAlso By > 5.1 * Math.Sqrt(Bx) Then
+                Return FlowPatterns.Dispersed
+            End If
+
+            ' Annular: By > 2040 / Bx^0.8 for Bx < 0.5
+            If Bx < 0.5 AndAlso By > 2040 / Math.Pow(Bx, 0.8) Then
+                Return FlowPatterns.Annular
+            End If
+
+            ' Stratified: By < 10 for Bx > 10
+            If Bx > 10 AndAlso By < 10 Then
+                Return FlowPatterns.Stratified
+            End If
+
+            ' Slug/Plug: By < 800 / Bx for Bx > 1
+            If Bx > 1 AndAlso By < 800 / Bx Then
+                Return FlowPatterns.PlugSlug
+            End If
+
+            ' Default to annular for geothermal conditions (high vapor fraction)
+            Return FlowPatterns.Annular
+        End Function
+
+        ''' <summary>
+        ''' Gets Baker chart coordinates for the current operating point
+        ''' </summary>
+        Public Function GetBakerCoordinates(W_V As Double, W_L As Double,
+                                            rho_V As Double, rho_L As Double,
+                                            sigma_L As Double, mu_L As Double,
+                                            A_pipe As Double) As (Bx As Double, By As Double)
+            ' Calculate mass fluxes [kg/m²·s]
+            Dim G_G As Double = W_V / A_pipe
+            Dim G_L As Double = W_L / A_pipe
+
+            ' Calculate Baker parameters
+            Dim lambda As Double = Math.Sqrt((rho_V / RHO_AIR) * (rho_L / RHO_WATER))
+            Dim psi As Double = (SIGMA_WATER / sigma_L) * Math.Pow((mu_L / MU_WATER) * Math.Pow(RHO_WATER / rho_L, 2), 1.0 / 3.0)
+
+            ' Baker chart coordinates
+            Dim Bx As Double = (G_L / G_G) * (rho_V / RHO_AIR) * Math.Sqrt(rho_L / RHO_WATER)
+            Dim By As Double = G_G / (lambda * psi)
+
+            Return (Bx, By)
+        End Function
+
+        ''' <summary>
+        ''' Calculates drop diameter using modified Nukiyama-Tanasawa equation
+        ''' </summary>
+        ''' <param name="V_T">Inlet steam velocity [m/s]</param>
+        ''' <param name="Q_VS">Steam volumetric flow [m³/s]</param>
+        ''' <param name="Q_L">Water volumetric flow [m³/s]</param>
+        ''' <param name="rho_L">Water density [kg/m³]</param>
+        ''' <param name="sigma_L">Surface tension [N/m]</param>
+        ''' <param name="mu_L">Water viscosity [Pa·s]</param>
+        ''' <param name="flowPattern">Flow pattern</param>
+        ''' <param name="X_s">Inlet steam quality</param>
+        ''' <returns>Drop diameter [microns]</returns>
+        Private Function CalculateDropDiameter(V_T As Double, Q_VS As Double, Q_L As Double,
+                                                rho_L As Double, sigma_L As Double, mu_L As Double,
+                                                flowPattern As FlowPatterns, X_s As Double) As Double
+            ' Constants from Lazalde-Crabtree
+            Const A As Double = 66.2898
+            Const K As Double = 1357.35
+            Const b As Double = 0.225
+            Const c As Double = 0.5507
+
+            ' Flow-pattern dependent constants
+            Dim a_const As Double
+            Dim B_const As Double
+            Dim e_const As Double
+
+            Select Case flowPattern
+                Case FlowPatterns.Stratified
+                    a_const = 0.5436
+                    B_const = 94.9042 * X_s
+                    e_const = -0.4538
+                Case FlowPatterns.Annular
+                    a_const = 0.8069
+                    B_const = 198.7749 * X_s
+                    e_const = 0.2628
+                Case FlowPatterns.Dispersed
+                    a_const = 0.8069
+                    B_const = 140.8346 * X_s
+                    e_const = 0.5747
+                Case FlowPatterns.PlugSlug
+                    a_const = 0.5436
+                    B_const = 37.3618 * X_s
+                    e_const = -0.0000688
+                Case Else
+                    ' Default to annular
+                    a_const = 0.8069
+                    B_const = 198.7749 * X_s
+                    e_const = 0.2628
+            End Select
+
+            ' Convert units for formula:
+            ' ρ_L in g/cm³, σ_L in dyne/cm, μ_L in poise
+            Dim rho_L_cgs As Double = rho_L / 1000.0        ' kg/m³ → g/cm³
+            Dim sigma_L_cgs As Double = sigma_L * 1000.0    ' N/m → dyne/cm
+            Dim mu_L_cgs As Double = mu_L * 10.0            ' Pa·s → poise
+
+            ' Prevent division by zero
+            If V_T < 0.1 Then V_T = 0.1
+            If Q_VS < 0.0001 Then Q_VS = 0.0001
+            If rho_L_cgs < 0.001 Then rho_L_cgs = 0.001
+            If sigma_L_cgs < 0.001 Then sigma_L_cgs = 0.001
+            If mu_L_cgs < 0.00001 Then mu_L_cgs = 0.00001
+
+            ' Nukiyama-Tanasawa equation (output in microns)
+            Dim term1 As Double = (A / Math.Pow(V_T, a_const)) * Math.Sqrt(sigma_L_cgs / rho_L_cgs)
+            Dim term2 As Double = B_const * K * Math.Pow(mu_L_cgs * mu_L_cgs / (sigma_L_cgs * rho_L_cgs), b)
+            Dim term3 As Double = Math.Pow(Q_L / Q_VS, c) * Math.Pow(V_T, e_const)
+
+            Dim d_w As Double = term1 + term2 * term3
+
+            ' Ensure reasonable bounds (1-1000 microns)
+            If d_w < 1 Then d_w = 1
+            If d_w > 1000 Then d_w = 1000
+
+            Return d_w
+        End Function
+
+        ''' <summary>
+        ''' Calculates centrifugal separation efficiency (eta_m)
+        ''' </summary>
+        ''' <param name="D">Vessel diameter [m]</param>
+        ''' <param name="D_e">Steam outlet diameter [m]</param>
+        ''' <param name="A_o">Inlet area [m²]</param>
+        ''' <param name="u">Tangential velocity [m/s]</param>
+        ''' <param name="d_w">Drop diameter [m]</param>
+        ''' <param name="rho_L">Water density [kg/m³]</param>
+        ''' <param name="mu_V">Steam viscosity [Pa·s]</param>
+        ''' <param name="T">Temperature [°C]</param>
+        ''' <param name="Q_VS">Steam volumetric flow [m³/s]</param>
+        ''' <param name="Z">Total height [m]</param>
+        ''' <param name="alpha">Lip position [m]</param>
+        ''' <returns>Centrifugal efficiency (0-1)</returns>
+        Private Function CalculateCentrifugalEfficiency(D As Double, D_e As Double, A_o As Double,
+                                                         u As Double, d_w As Double, rho_L As Double,
+                                                         mu_V As Double, T As Double, Q_VS As Double,
+                                                         Z As Double, alpha As Double) As Double
+            ' Validate inputs
+            If D <= 0 OrElse D_e <= 0 OrElse A_o <= 0 OrElse u <= 0 OrElse d_w <= 0 Then
+                Return 0.0
+            End If
+
+            ' Convert drop diameter from microns to meters
+            Dim d_w_m As Double = d_w * 0.000001
+
+            ' Calculate exponent n
+            Dim n1 As Double = 0.6689 * Math.Pow(D, 0.14)
+            Dim T_K As Double = T + 273.15
+            Dim n As Double = 1 - (1 - n1) * Math.Pow(294.3 / T_K, 0.3)
+
+            ' Calculate separator volumes
+            ' VO_S = (π/4) × (D² - A_o) × Z
+            Dim VO_S As Double = (Math.PI / 4) * (D * D - A_o) * Z
+
+            ' Head volumes (ASME flanged & dished)
+            ' VO₁ = (π×D²/4) × α
+            Dim VO_1 As Double = (Math.PI * D * D / 4) * Math.Abs(alpha)
+            ' VO₂ = 0.081 × D³
+            Dim VO_2 As Double = 0.081 * D * D * D
+            ' VO₃ = (π×D_e²/4) × (α + 0.169×D)
+            Dim VO_3 As Double = (Math.PI * D_e * D_e / 4) * (Math.Abs(alpha) + 0.169 * D)
+
+            Dim VO_H As Double = VO_1 + VO_2 - VO_3
+
+            ' Residence times
+            If Q_VS < 0.0001 Then Q_VS = 0.0001
+            Dim t_mi As Double = VO_S / Q_VS   ' Minimum residence time [s]
+            Dim t_ma As Double = VO_H / Q_VS   ' Additional time in head [s]
+            Dim t_r As Double = t_mi + t_ma / 2.0  ' Total residence time [s]
+
+            ' K_c parameter
+            Dim K_c As Double = t_r * Q_VS / (D * D * D)
+
+            ' C parameter
+            Dim C As Double = 8 * K_c * D * D / A_o
+
+            ' Psi parameter
+            If mu_V < 0.000001 Then mu_V = 0.000001
+            Dim psi As Double = (rho_L * d_w_m * d_w_m * (n + 1) * u) / (18 * mu_V * D)
+
+            ' Centrifugal efficiency
+            Dim exponent As Double = 2 * Math.Pow(psi * C, 1.0 / (2 * n + 2))
+            Dim eta_m As Double = 1 - Math.Exp(-exponent)
+
+            ' Clamp to valid range
+            If eta_m < 0 Then eta_m = 0
+            If eta_m > 1 Then eta_m = 1
+
+            Return eta_m
+        End Function
+
+        ''' <summary>
+        ''' Calculates entrainment efficiency (eta_A) based on annular velocity
+        ''' </summary>
+        ''' <param name="V_AN">Annular upward velocity [m/s]</param>
+        ''' <returns>Entrainment efficiency (0-1)</returns>
+        Private Function CalculateEntrainmentEfficiency(V_AN As Double) As Double
+            ' From Lazalde-Crabtree:
+            ' η_A = 10^j
+            ' j = -3.384 × 10^(-14) × V_AN^13.9241
+
+            If V_AN <= 0 Then Return 1.0
+
+            Dim j As Double = -3.384E-14 * Math.Pow(V_AN, 13.9241)
+
+            ' Limit j to prevent numerical issues
+            If j < -10 Then j = -10  ' η_A = 1E-10 minimum
+            If j > 0 Then j = 0      ' η_A = 1 maximum
+
+            Dim eta_A As Double = Math.Pow(10, j)
+
+            ' Clamp to valid range
+            If eta_A < 0 Then eta_A = 0
+            If eta_A > 1 Then eta_A = 1
+
+            Return eta_A
+        End Function
+
+        ''' <summary>
+        ''' Calculates outlet steam quality accounting for water carryover
+        ''' </summary>
+        ''' <param name="W_V">Steam mass flow [kg/s]</param>
+        ''' <param name="W_L">Water mass flow [kg/s]</param>
+        ''' <param name="eta_ef">Overall efficiency (0-1)</param>
+        ''' <returns>Outlet steam quality (0-1)</returns>
+        Private Function CalculateOutletQuality(W_V As Double, W_L As Double, eta_ef As Double) As Double
+            ' Special cases
+            If eta_ef >= 1.0 Then Return 1.0
+            If eta_ef <= 0.0 Then Return W_V / (W_V + W_L)  ' Inlet quality
+            If W_L <= 0 Then Return 1.0  ' Pure vapor
+
+            ' X_o = (W_V/W_L) / (1 - η_ef + W_V/W_L)
+            Dim ratio As Double = W_V / W_L
+            Dim X_o As Double = ratio / (1 - eta_ef + ratio)
+
+            ' Clamp to valid range
+            If X_o < 0 Then X_o = 0
+            If X_o > 1 Then X_o = 1
+
+            Return X_o
+        End Function
+
+        ''' <summary>
+        ''' Calculates separator pressure drop
+        ''' </summary>
+        ''' <param name="u">Tangential velocity [m/s]</param>
+        ''' <param name="rho_V">Steam density [kg/m³]</param>
+        ''' <param name="A_inlet">Inlet area [m²]</param>
+        ''' <param name="D_e">Steam outlet diameter [m]</param>
+        ''' <param name="equipType">Equipment type (Separator or Dryer)</param>
+        ''' <param name="D_t">Inlet pipe diameter [m]</param>
+        ''' <returns>Pressure drop [Pa]</returns>
+        Private Function CalculatePressureDrop(u As Double, rho_V As Double, A_inlet As Double,
+                                                D_e As Double, equipType As SeparatorType, D_t As Double) As Double
+            ' ΔP = (N_H × u² × ρ_v) / 2 [Pa]
+            ' N_H = 16 × (A_inlet) / D_e²
+
+            If D_e <= 0 Then Return 0
+
+            Dim N_H As Double
+            If equipType = SeparatorType.Separator Then
+                ' Spiral inlet: A_inlet ≈ A_e × B_e ≈ D_t²
+                N_H = 16 * A_inlet / (D_e * D_e)
+            Else
+                ' Tangential inlet: A_inlet = π×D_T²/4
+                N_H = 16 * (Math.PI * D_t * D_t / 4) / (D_e * D_e)
+            End If
+
+            ' Store for display
+            Me.VelocityHeads = N_H
+
+            Dim deltaP As Double = (N_H * u * u * rho_V) / 2.0
+
+            Return deltaP
+        End Function
+
+        ''' <summary>
+        ''' Calculates separator dimensions based on Lazalde-Crabtree ratios
+        ''' </summary>
+        Private Sub CalculateSeparatorDimensions()
+            Dim D_t As Double = Me.InletPipeDiameter
+
+            If EquipmentType = SeparatorType.Separator Then
+                ' Separator (X_i < 95%)
+                Me.VesselDiameter = 3.3 * D_t
+                Me.SteamOutletDiameter = 1.0 * D_t
+                Me.WaterOutletDiameter = 1.0 * D_t
+                Me.LipPosition = -0.15 * D_t
+                Me.CycloneHeight = 3.5 * D_t
+                Me.TotalHeight = 5.5 * D_t
+                ' Spiral inlet area ≈ D_t²
+                Me.InletArea = D_t * D_t
+            Else
+                ' Dryer (X_i > 95%)
+                Me.VesselDiameter = 3.5 * D_t
+                Me.SteamOutletDiameter = 1.0 * D_t
+                Me.WaterOutletDiameter = 0.0  ' Drain only
+                Me.LipPosition = -0.15 * D_t
+                Me.CycloneHeight = 3.0 * D_t
+                Me.TotalHeight = 4.0 * D_t
+                ' Tangential inlet area = π×D_t²/4
+                Me.InletArea = Math.PI * D_t * D_t / 4
+            End If
+        End Sub
+
+        ''' <summary>
+        ''' Performs Lazalde-Crabtree separation efficiency calculations
+        ''' Call this after the flash calculation in Calculate()
+        ''' </summary>
+        Private Sub CalculateLazaldeCrabtree()
+            Try
+                ' Get flash results from MixedStream
+                Dim W_V As Double = MixedStream.Phases(2).Properties.massflow.GetValueOrDefault
+                Dim W_L As Double = MixedStream.Phases(1).Properties.massflow.GetValueOrDefault +
+                                    MixedStream.Phases(3).Properties.massflow.GetValueOrDefault +
+                                    MixedStream.Phases(4).Properties.massflow.GetValueOrDefault
+                Dim W_M As Double = W_V + W_L
+
+                ' Get thermodynamic properties
+                Dim rho_V As Double = MixedStream.Phases(2).Properties.density.GetValueOrDefault
+                Dim rho_L As Double = MixedStream.Phases(1).Properties.density.GetValueOrDefault
+                If rho_L <= 0 Then rho_L = MixedStream.Phases(3).Properties.density.GetValueOrDefault
+                Dim mu_V As Double = MixedStream.Phases(2).Properties.viscosity.GetValueOrDefault
+                Dim mu_L As Double = MixedStream.Phases(1).Properties.viscosity.GetValueOrDefault
+                If mu_L <= 0 Then mu_L = MixedStream.Phases(3).Properties.viscosity.GetValueOrDefault
+                Dim T As Double = MixedStream.Phases(0).Properties.temperature.GetValueOrDefault - 273.15  ' Convert K to °C
+                Dim P As Double = MixedStream.Phases(0).Properties.pressure.GetValueOrDefault
+
+                ' Surface tension - use approximate correlation if not available
+                Dim sigma_L As Double = 0.0728  ' Default water at 20°C
+                Try
+                    ' Estimate surface tension from temperature (water)
+                    ' σ ≈ 0.0728 × (1 - T/647.1)^1.2 for water
+                    sigma_L = 0.0728 * Math.Pow(1 - (T + 273.15) / 647.1, 1.2)
+                    If sigma_L < 0.001 Then sigma_L = 0.001
+                Catch
+                    sigma_L = 0.0728
+                End Try
+
+                ' Calculate inlet steam quality
+                If W_M > 0 Then
+                    Me.InletSteamQuality = W_V / W_M
+                Else
+                    Me.InletSteamQuality = 0
+                End If
+
+                ' Auto-detect equipment type based on inlet quality
+                If Me.InletSteamQuality > 0.95 Then
+                    Me.EquipmentType = SeparatorType.Dryer
+                Else
+                    Me.EquipmentType = SeparatorType.Separator
+                End If
+
+                ' Calculate volumetric flows
+                Dim Q_VS As Double = 0
+                Dim Q_L As Double = 0
+                If rho_V > 0 Then Q_VS = W_V / rho_V
+                If rho_L > 0 Then Q_L = W_L / rho_L
+
+                ' Auto-size inlet pipe diameter if in AutoSize mode
+                If SizingMode = SizingModes.AutoSize Then
+                    ' V_T = 4 × Q_VS / (π × D_t²)
+                    ' Solve for D_t: D_t = √(4 × Q_VS / (π × V_T))
+                    If DesignSteamVelocity > 0 AndAlso Q_VS > 0 Then
+                        Me.InletPipeDiameter = Math.Sqrt(4 * Q_VS / (Math.PI * DesignSteamVelocity))
+                        ' Round to reasonable size (0.01m increments)
+                        Me.InletPipeDiameter = Math.Round(Me.InletPipeDiameter, 2)
+                        If Me.InletPipeDiameter < 0.1 Then Me.InletPipeDiameter = 0.1
+                        If Me.InletPipeDiameter > 2.0 Then Me.InletPipeDiameter = 2.0
+                    End If
+                End If
+
+                ' Calculate separator dimensions
+                CalculateSeparatorDimensions()
+
+                ' Calculate pipe area
+                Dim A_pipe As Double = Math.PI * Me.InletPipeDiameter * Me.InletPipeDiameter / 4
+
+                ' Calculate velocities
+                If A_pipe > 0 Then
+                    Me.ActualSteamVelocity = Q_VS / A_pipe
+                End If
+                If Me.InletArea > 0 Then
+                    Me.TangentialVelocity = Q_VS / Me.InletArea
+                End If
+                ' Annular velocity V_AN = 4×Q_VS / (π×(D² - D_e²))
+                Dim D As Double = Me.VesselDiameter
+                Dim D_e As Double = Me.SteamOutletDiameter
+                If D > D_e Then
+                    Me.AnnularVelocity = 4 * Q_VS / (Math.PI * (D * D - D_e * D_e))
+                End If
+
+                ' Detect flow pattern
+                If Me.FlowPattern = FlowPatterns.Auto Then
+                    Me.DetectedFlowPattern = DetectBakerFlowPattern(W_V, W_L, rho_V, rho_L, sigma_L, mu_L, A_pipe)
+                Else
+                    Me.DetectedFlowPattern = Me.FlowPattern
+                End If
+
+                ' Calculate drop diameter
+                Me.DropDiameter = CalculateDropDiameter(Me.ActualSteamVelocity, Q_VS, Q_L,
+                                                         rho_L, sigma_L, mu_L,
+                                                         Me.DetectedFlowPattern, Me.InletSteamQuality)
+
+                ' Calculate centrifugal efficiency
+                Me.CentrifugalEfficiency = CalculateCentrifugalEfficiency(D, D_e, Me.InletArea,
+                                                                           Me.TangentialVelocity, Me.DropDiameter,
+                                                                           rho_L, mu_V, T, Q_VS,
+                                                                           Me.TotalHeight, Me.LipPosition)
+
+                ' Calculate entrainment efficiency
+                Me.EntrainmentEfficiency = CalculateEntrainmentEfficiency(Me.AnnularVelocity)
+
+                ' Calculate overall efficiency
+                Me.OverallEfficiency = Me.CentrifugalEfficiency * Me.EntrainmentEfficiency
+
+                ' Calculate outlet steam quality
+                Me.OutletSteamQuality = CalculateOutletQuality(W_V, W_L, Me.OverallEfficiency)
+
+                ' Calculate water carryover
+                Me.WaterCarryover = W_L * (1 - Me.OverallEfficiency)
+
+                ' Calculate pressure drop
+                Me.SeparatorPressureDrop = CalculatePressureDrop(Me.TangentialVelocity, rho_V,
+                                                                  Me.InletArea, D_e,
+                                                                  Me.EquipmentType, Me.InletPipeDiameter)
+
+                ' Validate velocity
+                ValidateVelocity()
+
+            Catch ex As Exception
+                ' Log error but don't fail the calculation
+                Me.VelocityStatus = "Error in Lazalde-Crabtree calculation: " & ex.Message
+                Me.VelocityInRange = False
+            End Try
+        End Sub
+
+        ''' <summary>
+        ''' Validates steam velocity against recommended ranges
+        ''' </summary>
+        Private Sub ValidateVelocity()
+            Dim V_T As Double = Me.ActualSteamVelocity
+            Dim minV As Double
+            Dim maxV As Double
+
+            If Me.EquipmentType = SeparatorType.Separator Then
+                minV = 25
+                maxV = 45
+            Else
+                minV = 35
+                maxV = 60
+            End If
+
+            If V_T < minV Then
+                Me.VelocityStatus = String.Format("WARNING: V_T = {0:F1} m/s is below recommended {1} m/s minimum", V_T, minV)
+                Me.VelocityInRange = False
+            ElseIf V_T > maxV Then
+                Me.VelocityStatus = String.Format("WARNING: V_T = {0:F1} m/s exceeds recommended {1} m/s maximum", V_T, maxV)
+                Me.VelocityInRange = False
+            Else
+                Me.VelocityStatus = String.Format("V_T = {0:F1} m/s is within recommended range ({1}-{2} m/s)", V_T, minV, maxV)
+                Me.VelocityInRange = True
+            End If
         End Sub
 
 #End Region

@@ -98,6 +98,9 @@ Public Class EditingForm_GeothermalSeparator
                 ' Update results
                 UpdateResults()
 
+                ' Update efficiency tab
+                UpdateEfficiencyTab()
+
             End With
 
         Catch ex As Exception
@@ -154,6 +157,136 @@ Public Class EditingForm_GeothermalSeparator
             lblVaporFlowValue.Text = "—"
             lblLiquidFlowValue.Text = "—"
             lblVaporFractionValue.Text = "—"
+        End Try
+    End Sub
+
+    Private Sub UpdateEfficiencyTab()
+        If SeparatorObject Is Nothing Then Exit Sub
+
+        Try
+            With SeparatorObject
+                ' Update inputs
+                cbSizingMode.SelectedIndex = CInt(.SizingMode)
+                cbFlowPattern.SelectedIndex = CInt(.FlowPattern)
+                tbDesignVelocity.Text = .DesignSteamVelocity.ToString("F1")
+                tbInletDiameter.Text = .InletPipeDiameter.ToString("F3")
+
+                ' Update calculated results
+                ' Equipment type
+                lblEquipTypeValue.Text = If(.EquipmentType = GeothermalSeparator.SeparatorType.Separator, "Separator", "Dryer")
+
+                ' Detected flow pattern
+                Select Case .DetectedFlowPattern
+                    Case GeothermalSeparator.FlowPatterns.Stratified
+                        lblDetectedPatternValue.Text = "Stratified/Wavy"
+                    Case GeothermalSeparator.FlowPatterns.Annular
+                        lblDetectedPatternValue.Text = "Annular"
+                    Case GeothermalSeparator.FlowPatterns.Dispersed
+                        lblDetectedPatternValue.Text = "Dispersed/Bubble"
+                    Case GeothermalSeparator.FlowPatterns.PlugSlug
+                        lblDetectedPatternValue.Text = "Plug/Slug"
+                    Case Else
+                        lblDetectedPatternValue.Text = "Auto"
+                End Select
+
+                ' Dimensions
+                If .VesselDiameter > 0 Then
+                    lblVesselDiamValue.Text = su.Converter.ConvertFromSI(units.diameter, .VesselDiameter).ToString("F3") & " " & units.diameter
+                Else
+                    lblVesselDiamValue.Text = "—"
+                End If
+
+                If .TotalHeight > 0 Then
+                    lblTotalHtValue.Text = su.Converter.ConvertFromSI(units.distance, .TotalHeight).ToString("F3") & " " & units.distance
+                Else
+                    lblTotalHtValue.Text = "—"
+                End If
+
+                ' Velocities
+                If .ActualSteamVelocity > 0 Then
+                    lblInletVelocityValue.Text = .ActualSteamVelocity.ToString("F1") & " m/s"
+                Else
+                    lblInletVelocityValue.Text = "—"
+                End If
+
+                If .AnnularVelocity > 0 Then
+                    lblAnnularVelValue.Text = .AnnularVelocity.ToString("F2") & " m/s"
+                Else
+                    lblAnnularVelValue.Text = "—"
+                End If
+
+                ' Drop diameter
+                If .DropDiameter > 0 Then
+                    lblDropDiamValue.Text = .DropDiameter.ToString("F1") & " μm"
+                Else
+                    lblDropDiamValue.Text = "—"
+                End If
+
+                ' Efficiencies
+                If .CentrifugalEfficiency > 0 Then
+                    lblCentrifugalEffValue.Text = (.CentrifugalEfficiency * 100).ToString("F4") & " %"
+                Else
+                    lblCentrifugalEffValue.Text = "—"
+                End If
+
+                If .EntrainmentEfficiency > 0 Then
+                    lblEntrainmentEffValue.Text = (.EntrainmentEfficiency * 100).ToString("F4") & " %"
+                Else
+                    lblEntrainmentEffValue.Text = "—"
+                End If
+
+                If .OverallEfficiency > 0 Then
+                    lblOverallEffValue.Text = (.OverallEfficiency * 100).ToString("F4") & " %"
+                    lblOverallEffValue.ForeColor = If(.OverallEfficiency >= 0.999, Color.Green, If(.OverallEfficiency >= 0.99, Color.Blue, Color.Red))
+                Else
+                    lblOverallEffValue.Text = "—"
+                    lblOverallEffValue.ForeColor = Color.Black
+                End If
+
+                ' Outlet quality
+                If .OutletSteamQuality > 0 Then
+                    lblOutletQualityValue.Text = (.OutletSteamQuality * 100).ToString("F4") & " %"
+                    lblOutletQualityValue.ForeColor = If(.OutletSteamQuality >= 0.9995, Color.Green, If(.OutletSteamQuality >= 0.999, Color.Blue, Color.Red))
+                Else
+                    lblOutletQualityValue.Text = "—"
+                    lblOutletQualityValue.ForeColor = Color.Black
+                End If
+
+                ' Water carryover
+                If .WaterCarryover >= 0 Then
+                    lblCarryoverValue.Text = su.Converter.ConvertFromSI(units.massflow, .WaterCarryover).ToString("F4") & " " & units.massflow
+                Else
+                    lblCarryoverValue.Text = "—"
+                End If
+
+                ' Pressure drop
+                If .SeparatorPressureDrop > 0 Then
+                    lblSepPressureDropValue.Text = su.Converter.ConvertFromSI(units.deltaP, .SeparatorPressureDrop).ToString("F2") & " " & units.deltaP
+                Else
+                    lblSepPressureDropValue.Text = "—"
+                End If
+
+                ' Velocity warning
+                lblVelocityWarning.Text = .VelocityStatus
+                lblVelocityWarning.ForeColor = If(.VelocityInRange, Color.Green, Color.OrangeRed)
+
+            End With
+        Catch
+            ' Reset all efficiency values on error
+            lblEquipTypeValue.Text = "—"
+            lblDetectedPatternValue.Text = "—"
+            lblVesselDiamValue.Text = "—"
+            lblTotalHtValue.Text = "—"
+            lblInletVelocityValue.Text = "—"
+            lblAnnularVelValue.Text = "—"
+            lblDropDiamValue.Text = "—"
+            lblCentrifugalEffValue.Text = "—"
+            lblEntrainmentEffValue.Text = "—"
+            lblOverallEffValue.Text = "—"
+            lblOutletQualityValue.Text = "—"
+            lblCarryoverValue.Text = "—"
+            lblSepPressureDropValue.Text = "—"
+            lblVelocityWarning.Text = ""
         End Try
     End Sub
 
@@ -646,6 +779,56 @@ Public Class EditingForm_GeothermalSeparator
     End Sub
 
     Private Sub tbResidenceTime_KeyDown(sender As Object, e As KeyEventArgs) Handles tbResidenceTime.KeyDown
+        If e.KeyCode = Keys.Enter Then
+            RequestCalc()
+        End If
+    End Sub
+
+#End Region
+
+#Region "Efficiency Tab Event Handlers"
+
+    Private Sub cbSizingMode_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cbSizingMode.SelectedIndexChanged
+        If Not Loaded OrElse SeparatorObject Is Nothing Then Exit Sub
+        SeparatorObject.SizingMode = CType(cbSizingMode.SelectedIndex, GeothermalSeparator.SizingModes)
+        ' Enable/disable inlet diameter based on sizing mode
+        tbInletDiameter.Enabled = (cbSizingMode.SelectedIndex = 1)  ' Rating mode
+    End Sub
+
+    Private Sub cbFlowPattern_SelectedIndexChanged(sender As Object, e As EventArgs) Handles cbFlowPattern.SelectedIndexChanged
+        If Not Loaded OrElse SeparatorObject Is Nothing Then Exit Sub
+        SeparatorObject.FlowPattern = CType(cbFlowPattern.SelectedIndex, GeothermalSeparator.FlowPatterns)
+    End Sub
+
+    Private Sub tbDesignVelocity_TextChanged(sender As Object, e As EventArgs) Handles tbDesignVelocity.TextChanged
+        If Not Loaded OrElse SeparatorObject Is Nothing Then Exit Sub
+        Dim value As Double
+        If Double.TryParse(tbDesignVelocity.Text, value) AndAlso value > 0 Then
+            SeparatorObject.DesignSteamVelocity = value
+            tbDesignVelocity.ForeColor = Color.Blue
+        Else
+            tbDesignVelocity.ForeColor = Color.Red
+        End If
+    End Sub
+
+    Private Sub tbDesignVelocity_KeyDown(sender As Object, e As KeyEventArgs) Handles tbDesignVelocity.KeyDown
+        If e.KeyCode = Keys.Enter Then
+            RequestCalc()
+        End If
+    End Sub
+
+    Private Sub tbInletDiameter_TextChanged(sender As Object, e As EventArgs) Handles tbInletDiameter.TextChanged
+        If Not Loaded OrElse SeparatorObject Is Nothing Then Exit Sub
+        Dim value As Double
+        If Double.TryParse(tbInletDiameter.Text, value) AndAlso value > 0 Then
+            SeparatorObject.InletPipeDiameter = value
+            tbInletDiameter.ForeColor = Color.Blue
+        Else
+            tbInletDiameter.ForeColor = Color.Red
+        End If
+    End Sub
+
+    Private Sub tbInletDiameter_KeyDown(sender As Object, e As KeyEventArgs) Handles tbInletDiameter.KeyDown
         If e.KeyCode = Keys.Enter Then
             RequestCalc()
         End If

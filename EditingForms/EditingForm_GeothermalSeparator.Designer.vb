@@ -65,6 +65,7 @@ Partial Class EditingForm_GeothermalSeparator
         Me.TabPageCalc = New System.Windows.Forms.TabPage()
         Me.TabPageSizing = New System.Windows.Forms.TabPage()
         Me.TabPageResults = New System.Windows.Forms.TabPage()
+        Me.TabPageEfficiency = New System.Windows.Forms.TabPage()
 
         ' Calculation Tab Controls
         Me.lblCalcMode = New System.Windows.Forms.Label()
@@ -101,6 +102,43 @@ Partial Class EditingForm_GeothermalSeparator
         Me.lblVaporFraction = New System.Windows.Forms.Label()
         Me.lblVaporFractionValue = New System.Windows.Forms.Label()
 
+        ' Efficiency Tab Controls (Lazalde-Crabtree)
+        Me.lblSizingMode = New System.Windows.Forms.Label()
+        Me.cbSizingMode = New System.Windows.Forms.ComboBox()
+        Me.lblFlowPattern = New System.Windows.Forms.Label()
+        Me.cbFlowPattern = New System.Windows.Forms.ComboBox()
+        Me.lblDesignVelocity = New System.Windows.Forms.Label()
+        Me.tbDesignVelocity = New System.Windows.Forms.TextBox()
+        Me.lblInletDiameter = New System.Windows.Forms.Label()
+        Me.tbInletDiameter = New System.Windows.Forms.TextBox()
+        Me.lblEquipType = New System.Windows.Forms.Label()
+        Me.lblEquipTypeValue = New System.Windows.Forms.Label()
+        Me.lblDetectedPattern = New System.Windows.Forms.Label()
+        Me.lblDetectedPatternValue = New System.Windows.Forms.Label()
+        Me.lblVesselDiam = New System.Windows.Forms.Label()
+        Me.lblVesselDiamValue = New System.Windows.Forms.Label()
+        Me.lblTotalHt = New System.Windows.Forms.Label()
+        Me.lblTotalHtValue = New System.Windows.Forms.Label()
+        Me.lblInletVelocity = New System.Windows.Forms.Label()
+        Me.lblInletVelocityValue = New System.Windows.Forms.Label()
+        Me.lblAnnularVel = New System.Windows.Forms.Label()
+        Me.lblAnnularVelValue = New System.Windows.Forms.Label()
+        Me.lblDropDiam = New System.Windows.Forms.Label()
+        Me.lblDropDiamValue = New System.Windows.Forms.Label()
+        Me.lblCentrifugalEff = New System.Windows.Forms.Label()
+        Me.lblCentrifugalEffValue = New System.Windows.Forms.Label()
+        Me.lblEntrainmentEff = New System.Windows.Forms.Label()
+        Me.lblEntrainmentEffValue = New System.Windows.Forms.Label()
+        Me.lblOverallEff = New System.Windows.Forms.Label()
+        Me.lblOverallEffValue = New System.Windows.Forms.Label()
+        Me.lblOutletQuality = New System.Windows.Forms.Label()
+        Me.lblOutletQualityValue = New System.Windows.Forms.Label()
+        Me.lblCarryover = New System.Windows.Forms.Label()
+        Me.lblCarryoverValue = New System.Windows.Forms.Label()
+        Me.lblSepPressureDrop = New System.Windows.Forms.Label()
+        Me.lblSepPressureDropValue = New System.Windows.Forms.Label()
+        Me.lblVelocityWarning = New System.Windows.Forms.Label()
+
         ' Suspend layouts
         Me.GroupBoxStatus.SuspendLayout()
         Me.GroupBoxConnections.SuspendLayout()
@@ -109,6 +147,7 @@ Partial Class EditingForm_GeothermalSeparator
         Me.TabPageCalc.SuspendLayout()
         Me.TabPageSizing.SuspendLayout()
         Me.TabPageResults.SuspendLayout()
+        Me.TabPageEfficiency.SuspendLayout()
         Me.SuspendLayout()
 
         ' ===============================
@@ -365,6 +404,7 @@ Partial Class EditingForm_GeothermalSeparator
         ' TabControl
         Me.TabControlParams.Controls.Add(Me.TabPageCalc)
         Me.TabControlParams.Controls.Add(Me.TabPageSizing)
+        Me.TabControlParams.Controls.Add(Me.TabPageEfficiency)
         Me.TabControlParams.Controls.Add(Me.TabPageResults)
         Me.TabControlParams.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TabControlParams.Location = New System.Drawing.Point(3, 16)
@@ -598,6 +638,223 @@ Partial Class EditingForm_GeothermalSeparator
         Me.lblVaporFractionValue.Text = "—"
 
         ' ===============================
+        ' TabPageEfficiency - Lazalde-Crabtree Efficiency
+        ' ===============================
+        Me.TabPageEfficiency.Controls.Add(Me.lblSizingMode)
+        Me.TabPageEfficiency.Controls.Add(Me.cbSizingMode)
+        Me.TabPageEfficiency.Controls.Add(Me.lblFlowPattern)
+        Me.TabPageEfficiency.Controls.Add(Me.cbFlowPattern)
+        Me.TabPageEfficiency.Controls.Add(Me.lblDesignVelocity)
+        Me.TabPageEfficiency.Controls.Add(Me.tbDesignVelocity)
+        Me.TabPageEfficiency.Controls.Add(Me.lblInletDiameter)
+        Me.TabPageEfficiency.Controls.Add(Me.tbInletDiameter)
+        Me.TabPageEfficiency.Controls.Add(Me.lblEquipType)
+        Me.TabPageEfficiency.Controls.Add(Me.lblEquipTypeValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblDetectedPattern)
+        Me.TabPageEfficiency.Controls.Add(Me.lblDetectedPatternValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblVesselDiam)
+        Me.TabPageEfficiency.Controls.Add(Me.lblVesselDiamValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblTotalHt)
+        Me.TabPageEfficiency.Controls.Add(Me.lblTotalHtValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblInletVelocity)
+        Me.TabPageEfficiency.Controls.Add(Me.lblInletVelocityValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblAnnularVel)
+        Me.TabPageEfficiency.Controls.Add(Me.lblAnnularVelValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblDropDiam)
+        Me.TabPageEfficiency.Controls.Add(Me.lblDropDiamValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblCentrifugalEff)
+        Me.TabPageEfficiency.Controls.Add(Me.lblCentrifugalEffValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblEntrainmentEff)
+        Me.TabPageEfficiency.Controls.Add(Me.lblEntrainmentEffValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblOverallEff)
+        Me.TabPageEfficiency.Controls.Add(Me.lblOverallEffValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblOutletQuality)
+        Me.TabPageEfficiency.Controls.Add(Me.lblOutletQualityValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblCarryover)
+        Me.TabPageEfficiency.Controls.Add(Me.lblCarryoverValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblSepPressureDrop)
+        Me.TabPageEfficiency.Controls.Add(Me.lblSepPressureDropValue)
+        Me.TabPageEfficiency.Controls.Add(Me.lblVelocityWarning)
+        Me.TabPageEfficiency.AutoScroll = True
+        Me.TabPageEfficiency.Location = New System.Drawing.Point(4, 22)
+        Me.TabPageEfficiency.Name = "TabPageEfficiency"
+        Me.TabPageEfficiency.Padding = New System.Windows.Forms.Padding(3)
+        Me.TabPageEfficiency.Size = New System.Drawing.Size(370, 237)
+        Me.TabPageEfficiency.TabIndex = 3
+        Me.TabPageEfficiency.Text = "Efficiency"
+        Me.TabPageEfficiency.UseVisualStyleBackColor = True
+
+        ' Efficiency Tab Controls - Inputs Section
+        Dim effY As Integer = 8
+        Dim effLblX As Integer = 10
+        Dim effValX As Integer = 130
+        Dim effRowH As Integer = 22
+
+        Me.lblSizingMode.AutoSize = True
+        Me.lblSizingMode.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblSizingMode.Text = "Sizing Mode:"
+
+        Me.cbSizingMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.cbSizingMode.Items.AddRange(New Object() {"Auto-Size", "Rating", "Design"})
+        Me.cbSizingMode.Location = New System.Drawing.Point(effValX, effY - 3)
+        Me.cbSizingMode.Size = New System.Drawing.Size(100, 21)
+
+        effY += effRowH
+        Me.lblFlowPattern.AutoSize = True
+        Me.lblFlowPattern.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblFlowPattern.Text = "Flow Pattern:"
+
+        Me.cbFlowPattern.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
+        Me.cbFlowPattern.Items.AddRange(New Object() {"Auto", "Stratified", "Annular", "Dispersed", "Plug/Slug"})
+        Me.cbFlowPattern.Location = New System.Drawing.Point(effValX, effY - 3)
+        Me.cbFlowPattern.Size = New System.Drawing.Size(100, 21)
+
+        effY += effRowH
+        Me.lblDesignVelocity.AutoSize = True
+        Me.lblDesignVelocity.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblDesignVelocity.Text = "Design V_T (m/s):"
+
+        Me.tbDesignVelocity.Location = New System.Drawing.Point(effValX, effY - 3)
+        Me.tbDesignVelocity.Size = New System.Drawing.Size(60, 20)
+
+        effY += effRowH
+        Me.lblInletDiameter.AutoSize = True
+        Me.lblInletDiameter.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblInletDiameter.Text = "Inlet D_t (m):"
+
+        Me.tbInletDiameter.Location = New System.Drawing.Point(effValX, effY - 3)
+        Me.tbInletDiameter.Size = New System.Drawing.Size(60, 20)
+
+        ' Results Section
+        effY += effRowH + 5
+        Me.lblEquipType.AutoSize = True
+        Me.lblEquipType.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblEquipType.Text = "Equipment Type:"
+        Me.lblEquipType.Font = New System.Drawing.Font(Me.Font.FontFamily, 8, System.Drawing.FontStyle.Bold)
+
+        Me.lblEquipTypeValue.AutoSize = True
+        Me.lblEquipTypeValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblEquipTypeValue.Text = "—"
+
+        effY += effRowH
+        Me.lblDetectedPattern.AutoSize = True
+        Me.lblDetectedPattern.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblDetectedPattern.Text = "Detected Pattern:"
+
+        Me.lblDetectedPatternValue.AutoSize = True
+        Me.lblDetectedPatternValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblDetectedPatternValue.Text = "—"
+
+        effY += effRowH
+        Me.lblVesselDiam.AutoSize = True
+        Me.lblVesselDiam.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblVesselDiam.Text = "Vessel Diameter:"
+
+        Me.lblVesselDiamValue.AutoSize = True
+        Me.lblVesselDiamValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblVesselDiamValue.Text = "—"
+
+        effY += effRowH
+        Me.lblTotalHt.AutoSize = True
+        Me.lblTotalHt.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblTotalHt.Text = "Total Height:"
+
+        Me.lblTotalHtValue.AutoSize = True
+        Me.lblTotalHtValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblTotalHtValue.Text = "—"
+
+        effY += effRowH
+        Me.lblInletVelocity.AutoSize = True
+        Me.lblInletVelocity.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblInletVelocity.Text = "Inlet Velocity V_T:"
+
+        Me.lblInletVelocityValue.AutoSize = True
+        Me.lblInletVelocityValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblInletVelocityValue.Text = "—"
+
+        effY += effRowH
+        Me.lblAnnularVel.AutoSize = True
+        Me.lblAnnularVel.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblAnnularVel.Text = "Annular Velocity:"
+
+        Me.lblAnnularVelValue.AutoSize = True
+        Me.lblAnnularVelValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblAnnularVelValue.Text = "—"
+
+        effY += effRowH
+        Me.lblDropDiam.AutoSize = True
+        Me.lblDropDiam.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblDropDiam.Text = "Drop Diameter:"
+
+        Me.lblDropDiamValue.AutoSize = True
+        Me.lblDropDiamValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblDropDiamValue.Text = "—"
+
+        effY += effRowH
+        Me.lblCentrifugalEff.AutoSize = True
+        Me.lblCentrifugalEff.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblCentrifugalEff.Text = "Centrifugal η_m:"
+
+        Me.lblCentrifugalEffValue.AutoSize = True
+        Me.lblCentrifugalEffValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblCentrifugalEffValue.Text = "—"
+
+        effY += effRowH
+        Me.lblEntrainmentEff.AutoSize = True
+        Me.lblEntrainmentEff.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblEntrainmentEff.Text = "Entrainment η_A:"
+
+        Me.lblEntrainmentEffValue.AutoSize = True
+        Me.lblEntrainmentEffValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblEntrainmentEffValue.Text = "—"
+
+        effY += effRowH
+        Me.lblOverallEff.AutoSize = True
+        Me.lblOverallEff.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblOverallEff.Text = "Overall η_ef:"
+        Me.lblOverallEff.Font = New System.Drawing.Font(Me.Font.FontFamily, 8, System.Drawing.FontStyle.Bold)
+
+        Me.lblOverallEffValue.AutoSize = True
+        Me.lblOverallEffValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblOverallEffValue.Text = "—"
+        Me.lblOverallEffValue.Font = New System.Drawing.Font(Me.Font.FontFamily, 8, System.Drawing.FontStyle.Bold)
+
+        effY += effRowH
+        Me.lblOutletQuality.AutoSize = True
+        Me.lblOutletQuality.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblOutletQuality.Text = "Outlet Quality X_o:"
+        Me.lblOutletQuality.Font = New System.Drawing.Font(Me.Font.FontFamily, 8, System.Drawing.FontStyle.Bold)
+
+        Me.lblOutletQualityValue.AutoSize = True
+        Me.lblOutletQualityValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblOutletQualityValue.Text = "—"
+        Me.lblOutletQualityValue.Font = New System.Drawing.Font(Me.Font.FontFamily, 8, System.Drawing.FontStyle.Bold)
+
+        effY += effRowH
+        Me.lblCarryover.AutoSize = True
+        Me.lblCarryover.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblCarryover.Text = "Water Carryover:"
+
+        Me.lblCarryoverValue.AutoSize = True
+        Me.lblCarryoverValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblCarryoverValue.Text = "—"
+
+        effY += effRowH
+        Me.lblSepPressureDrop.AutoSize = True
+        Me.lblSepPressureDrop.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblSepPressureDrop.Text = "Pressure Drop:"
+
+        Me.lblSepPressureDropValue.AutoSize = True
+        Me.lblSepPressureDropValue.Location = New System.Drawing.Point(effValX, effY)
+        Me.lblSepPressureDropValue.Text = "—"
+
+        effY += effRowH + 3
+        Me.lblVelocityWarning.AutoSize = True
+        Me.lblVelocityWarning.Location = New System.Drawing.Point(effLblX, effY)
+        Me.lblVelocityWarning.Text = ""
+        Me.lblVelocityWarning.MaximumSize = New System.Drawing.Size(340, 0)
+
+        ' ===============================
         ' Form Settings
         ' ===============================
         Me.AutoScaleDimensions = New System.Drawing.SizeF(96.0!, 96.0!)
@@ -622,6 +879,8 @@ Partial Class EditingForm_GeothermalSeparator
         Me.TabPageSizing.PerformLayout()
         Me.TabPageResults.ResumeLayout(False)
         Me.TabPageResults.PerformLayout()
+        Me.TabPageEfficiency.ResumeLayout(False)
+        Me.TabPageEfficiency.PerformLayout()
         Me.TabControlParams.ResumeLayout(False)
         Me.GroupBoxParameters.ResumeLayout(False)
         Me.ResumeLayout(False)
@@ -704,5 +963,43 @@ Partial Class EditingForm_GeothermalSeparator
     Friend WithEvents lblLiquidFlowValue As System.Windows.Forms.Label
     Friend WithEvents lblVaporFraction As System.Windows.Forms.Label
     Friend WithEvents lblVaporFractionValue As System.Windows.Forms.Label
+
+    ' Efficiency Tab (Lazalde-Crabtree)
+    Friend WithEvents TabPageEfficiency As System.Windows.Forms.TabPage
+    Friend WithEvents lblSizingMode As System.Windows.Forms.Label
+    Friend WithEvents cbSizingMode As System.Windows.Forms.ComboBox
+    Friend WithEvents lblFlowPattern As System.Windows.Forms.Label
+    Friend WithEvents cbFlowPattern As System.Windows.Forms.ComboBox
+    Friend WithEvents lblDesignVelocity As System.Windows.Forms.Label
+    Friend WithEvents tbDesignVelocity As System.Windows.Forms.TextBox
+    Friend WithEvents lblInletDiameter As System.Windows.Forms.Label
+    Friend WithEvents tbInletDiameter As System.Windows.Forms.TextBox
+    Friend WithEvents lblEquipType As System.Windows.Forms.Label
+    Friend WithEvents lblEquipTypeValue As System.Windows.Forms.Label
+    Friend WithEvents lblDetectedPattern As System.Windows.Forms.Label
+    Friend WithEvents lblDetectedPatternValue As System.Windows.Forms.Label
+    Friend WithEvents lblVesselDiam As System.Windows.Forms.Label
+    Friend WithEvents lblVesselDiamValue As System.Windows.Forms.Label
+    Friend WithEvents lblTotalHt As System.Windows.Forms.Label
+    Friend WithEvents lblTotalHtValue As System.Windows.Forms.Label
+    Friend WithEvents lblInletVelocity As System.Windows.Forms.Label
+    Friend WithEvents lblInletVelocityValue As System.Windows.Forms.Label
+    Friend WithEvents lblAnnularVel As System.Windows.Forms.Label
+    Friend WithEvents lblAnnularVelValue As System.Windows.Forms.Label
+    Friend WithEvents lblDropDiam As System.Windows.Forms.Label
+    Friend WithEvents lblDropDiamValue As System.Windows.Forms.Label
+    Friend WithEvents lblCentrifugalEff As System.Windows.Forms.Label
+    Friend WithEvents lblCentrifugalEffValue As System.Windows.Forms.Label
+    Friend WithEvents lblEntrainmentEff As System.Windows.Forms.Label
+    Friend WithEvents lblEntrainmentEffValue As System.Windows.Forms.Label
+    Friend WithEvents lblOverallEff As System.Windows.Forms.Label
+    Friend WithEvents lblOverallEffValue As System.Windows.Forms.Label
+    Friend WithEvents lblOutletQuality As System.Windows.Forms.Label
+    Friend WithEvents lblOutletQualityValue As System.Windows.Forms.Label
+    Friend WithEvents lblCarryover As System.Windows.Forms.Label
+    Friend WithEvents lblCarryoverValue As System.Windows.Forms.Label
+    Friend WithEvents lblSepPressureDrop As System.Windows.Forms.Label
+    Friend WithEvents lblSepPressureDropValue As System.Windows.Forms.Label
+    Friend WithEvents lblVelocityWarning As System.Windows.Forms.Label
 
 End Class
