@@ -134,9 +134,10 @@ Module TestLazaldeCrabtreePaperValidation
         Dim A_pipe As Double = Math.PI * D_t * D_t / 4
         Dim V_T As Double = Q_VS / A_pipe  ' Steam velocity in inlet pipe
 
-        ' Annular velocity V_AN = Q_L / A_annulus
+        ' V_AN = upward annular STEAM velocity (per Lazalde-Crabtree paper definition)
+        ' NOT liquid velocity! V_AN = Q_VS / A_annulus
         Dim A_annulus As Double = Math.PI / 4 * (D * D - D_e * D_e)
-        Dim V_AN As Double = Q_L / A_annulus
+        Dim V_AN As Double = Q_VS / A_annulus  ' Steam velocity in annular region
 
         ' Tangential velocity (same as inlet velocity for tangential entry)
         Dim u As Double = V_T
@@ -147,8 +148,8 @@ Module TestLazaldeCrabtreePaperValidation
         Console.WriteLine()
         Console.WriteLine($"  A_annulus = π/4×(D² - D_e²) = π/4×({D:F4}² - {D_e:F4}²)")
         Console.WriteLine($"            = π/4×({D * D:F6} - {D_e * D_e:F6}) = {A_annulus:F6} m²")
-        Console.WriteLine($"  V_AN = Q_L/A_annulus = {Q_L:F6}/{A_annulus:F6} = {V_AN:F4} m/s")
-        Console.WriteLine($"  (Design limit for 99.99% η_A: < 0.12 m/s)")
+        Console.WriteLine($"  V_AN = Q_VS/A_annulus = {Q_VS:F6}/{A_annulus:F6} = {V_AN:F4} m/s")
+        Console.WriteLine($"  (Upward annular STEAM velocity - per paper definition)")
         Console.WriteLine()
         Console.WriteLine($"  u (tangential) = V_T = {u:F2} m/s")
         Console.WriteLine()
