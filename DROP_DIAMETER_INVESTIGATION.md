@@ -36,17 +36,22 @@ Using the paper's example conditions (Xi = 7.56%, V_T = 26.53 m/s):
 
 ### Baker Flow Pattern Map Analysis
 
-Calculated Baker map coordinates for paper example:
-- **X = 484.7** (G_L × ψ / λ)
-- **Y = 114.8** (G_V × λ)
+Calculated Baker map coordinates for paper example using **Standard Baker (1954)** formulation:
+- **Bx = 27.7** = (G_L/G_G) × (ρ_V/ρ_AIR) × √(ρ_L/ρ_WATER)
+- **By = 63.2** = G_G / (λ × ψ)
 
-Baker map boundaries:
-- Annular: Y > 100, X < 10000 ← **This applies!**
-- Dispersed: Y < 100, X > 5000
-- Stratified: Y < 10, X < 1000
-- Plug/Slug: 10 < Y < 100, X < 1000
+Where:
+- λ = √[(ρ_V/ρ_AIR) × (ρ_L/ρ_WATER)] = 1.456
+- ψ = (σ_WATER/σ) × [(μ_L/μ_WATER) × (ρ_WATER/ρ_L)²]^(1/3) = 0.857
 
-**Result**: Baker map says **Annular flow** (Y=114.8 > 100), which gives d_w = 290 μm.
+Baker map boundaries (from GeothermalSeparator.vb):
+- Dispersed: Bx > 4000 AND By > 5.1 × √Bx
+- Annular: Bx < 0.5 AND By > 2040/Bx^0.8
+- Stratified: Bx > 10 AND By < 10
+- Plug/Slug: Bx > 1 AND By < 800/Bx
+- Default: Annular (for geothermal conditions)
+
+**Result**: Baker map says **Annular (default)** flow (Bx=27.7, By=63.2), which gives d_w = 290 μm.
 
 ---
 
