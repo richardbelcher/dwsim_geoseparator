@@ -67,20 +67,24 @@ Module TestLazaldeCrabtreePaperValidation
         Dim mu_V As Double = props.VaporViscosity ' Pa·s
         Dim mu_L As Double = props.LiquidViscosity ' Pa·s
 
-        ' Paper values for comparison
+        ' Paper values for comparison (some appear incorrect vs steam tables)
         Dim paper_T As Double = 155.0
         Dim paper_rho_V As Double = 2.973
         Dim paper_rho_L As Double = 876.7
         Dim paper_mu_V As Double = 0.0000135
-        Dim paper_mu_L As Double = 0.000135
+        Dim paper_mu_L As Double = 0.000135  ' Paper value - appears LOW vs steam tables!
 
-        Console.WriteLine("  Property          │ CoolProp      │ Paper         │ Diff %")
-        Console.WriteLine("  ──────────────────┼───────────────┼───────────────┼────────")
-        Console.WriteLine($"  T_sat (°C)        │ {T,10:F2}    │ {paper_T,10:F2}    │ {(T - paper_T) / paper_T * 100:F2}%")
-        Console.WriteLine($"  ρ_V (kg/m³)       │ {rho_V,10:F4}  │ {paper_rho_V,10:F4}  │ {(rho_V - paper_rho_V) / paper_rho_V * 100:F2}%")
-        Console.WriteLine($"  ρ_L (kg/m³)       │ {rho_L,10:F2}  │ {paper_rho_L,10:F2}  │ {(rho_L - paper_rho_L) / paper_rho_L * 100:F2}%")
-        Console.WriteLine($"  μ_V (Pa·s)        │ {mu_V,10:E3} │ {paper_mu_V,10:E3} │ {(mu_V - paper_mu_V) / paper_mu_V * 100:F2}%")
-        Console.WriteLine($"  μ_L (Pa·s)        │ {mu_L,10:E3} │ {paper_mu_L,10:E3} │ {(mu_L - paper_mu_L) / paper_mu_L * 100:F2}%")
+        Console.WriteLine("  Property          │ CoolProp      │ Paper         │ Diff %   │ Note")
+        Console.WriteLine("  ──────────────────┼───────────────┼───────────────┼──────────┼──────────")
+        Console.WriteLine($"  T_sat (°C)        │ {T,10:F2}    │ {paper_T,10:F2}    │ {(T - paper_T) / paper_T * 100,6:F2}%  │")
+        Console.WriteLine($"  ρ_V (kg/m³)       │ {rho_V,10:F4}  │ {paper_rho_V,10:F4}  │ {(rho_V - paper_rho_V) / paper_rho_V * 100,6:F2}%  │")
+        Console.WriteLine($"  ρ_L (kg/m³)       │ {rho_L,10:F2}  │ {paper_rho_L,10:F2}  │ {(rho_L - paper_rho_L) / paper_rho_L * 100,6:F2}%  │ Paper LOW!")
+        Console.WriteLine($"  μ_V (Pa·s)        │ {mu_V,10:E3} │ {paper_mu_V,10:E3} │ {(mu_V - paper_mu_V) / paper_mu_V * 100,6:F2}%  │")
+        Console.WriteLine($"  μ_L (Pa·s)        │ {mu_L,10:E3} │ {paper_mu_L,10:E3} │ {(mu_L - paper_mu_L) / paper_mu_L * 100,6:F2}%  │ Paper LOW!")
+        Console.WriteLine()
+        Console.WriteLine("  NOTE: Paper ρ_L = 876.7 and μ_L = 1.35E-4 appear incorrect.")
+        Console.WriteLine("        Steam tables at 155°C: ρ_L ≈ 912 kg/m³, μ_L ≈ 1.76E-4 Pa·s")
+        Console.WriteLine("        (CoolProp and ML2 spreadsheet use correct values)")
         Console.WriteLine()
         Console.WriteLine($"  Temperature T     = {T:F2} °C (from CoolProp saturation)")
         Console.WriteLine()
