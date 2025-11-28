@@ -101,6 +101,14 @@
       <HintPath>$(LOCALAPPDATA)\DWSIM\DWSIM.DrawingTools.Point.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="OxyPlot">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\OxyPlot.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="OxyPlot.WindowsForms">
+      <HintPath>$(LOCALAPPDATA)\DWSIM\OxyPlot.WindowsForms.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

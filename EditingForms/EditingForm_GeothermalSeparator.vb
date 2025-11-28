@@ -5,6 +5,10 @@ Imports su = DWSIM.SharedClasses.SystemsOfUnits
 Imports WeifenLuo.WinFormsUI.Docking
 Imports DWSIM.UnitOperations.UnitOperations
 Imports DWSIM.SharedClasses
+Imports OxyPlot
+Imports OxyPlot.Series
+Imports OxyPlot.Axes
+Imports OxyPlot.Annotations
 
 Public Class EditingForm_GeothermalSeparator
 
@@ -100,6 +104,9 @@ Public Class EditingForm_GeothermalSeparator
 
                 ' Update efficiency tab
                 UpdateEfficiencyTab()
+
+                ' Update charts tab
+                UpdateChartsTab()
 
             End With
 
@@ -266,9 +273,17 @@ Public Class EditingForm_GeothermalSeparator
                     lblSepPressureDropValue.Text = "—"
                 End If
 
-                ' Velocity warning
-                lblVelocityWarning.Text = .VelocityStatus
-                lblVelocityWarning.ForeColor = If(.VelocityInRange, Color.Green, Color.OrangeRed)
+                ' Velocity warnings (combined V_T and V_AN)
+                Dim warnings As New List(Of String)
+                If Not String.IsNullOrEmpty(.VelocityStatus) Then warnings.Add(.VelocityStatus)
+                If Not String.IsNullOrEmpty(.AnnularVelocityStatus) Then warnings.Add(.AnnularVelocityStatus)
+                If Not String.IsNullOrEmpty(.EquipmentTypeRecommendation) AndAlso Not .EquipmentTypeCorrect Then
+                    warnings.Add(.EquipmentTypeRecommendation)
+                End If
+
+                lblVelocityWarning.Text = String.Join(Environment.NewLine, warnings)
+                Dim allOK As Boolean = .VelocityInRange AndAlso .AnnularVelocityInRange AndAlso .EquipmentTypeCorrect
+                lblVelocityWarning.ForeColor = If(allOK, Color.Green, Color.OrangeRed)
 
             End With
         Catch
@@ -289,6 +304,238 @@ Public Class EditingForm_GeothermalSeparator
             lblVelocityWarning.Text = ""
         End Try
     End Sub
+
+    Private Sub UpdateChartsTab()
+        If SeparatorObject Is Nothing Then Exit Sub
+
+        Try
+            With SeparatorObject
+                ' Update Baker coordinates label
+                If .BakerBx > 0 OrElse .BakerBy > 0 Then
+                    lblBakerCoords.Text = String.Format("Bx = {0:F1}, By = {1:F1}  ({2})",
+                                                        .BakerBx, .BakerBy,
+                                                        GetFlowPatternName(.DetectedFlowPattern))
+                Else
+                    lblBakerCoords.Text = "Bx = —, By = —"
+                End If
+
+                ' Create Baker chart model
+                Dim model = CreateBakerChartModel(.BakerBx, .BakerBy)
+                plotBakerChart.Model = model
+
+            End With
+        Catch
+            lblBakerCoords.Text = "Bx = —, By = —"
+            plotBakerChart.Model = Nothing
+        End Try
+    End Sub
+
+    Private Function GetFlowPatternName(pattern As GeothermalSeparator.FlowPatterns) As String
+        Select Case pattern
+            Case GeothermalSeparator.FlowPatterns.Stratified
+                Return "Stratified"
+            Case GeothermalSeparator.FlowPatterns.Annular
+                Return "Annular"
+            Case GeothermalSeparator.FlowPatterns.Dispersed
+                Return "Dispersed"
+            Case GeothermalSeparator.FlowPatterns.PlugSlug
+                Return "Plug/Slug"
+            Case Else
+                Return "Auto"
+        End Select
+    End Function
+
+    Private Function CreateBakerChartModel(Bx As Double, By As Double) As PlotModel
+        Dim model As New PlotModel()
+        model.Title = "Baker Flow Pattern Map"
+        model.TitleFontSize = 10
+
+        ' Log-log axes
+        Dim xAxis As New LogarithmicAxis()
+        xAxis.Position = AxisPosition.Bottom
+        xAxis.Title = "Bx = (G_L/G_G) × λ²"
+        xAxis.Minimum = 1
+        xAxis.Maximum = 100000
+        xAxis.MajorGridlineStyle = LineStyle.Solid
+        xAxis.MajorGridlineColor = OxyColor.FromRgb(220, 220, 220)
+        model.Axes.Add(xAxis)
+
+        Dim yAxis As New LogarithmicAxis()
+        yAxis.Position = AxisPosition.Left
+        yAxis.Title = "By = G_G / (λ × ψ)"
+        yAxis.Minimum = 0.1
+        yAxis.Maximum = 1000
+        yAxis.MajorGridlineStyle = LineStyle.Solid
+        yAxis.MajorGridlineColor = OxyColor.FromRgb(220, 220, 220)
+        model.Axes.Add(yAxis)
+
+        ' =====================================================
+        ' BAKER FLOW PATTERN MAP BOUNDARIES
+        ' Reference: Revistadechimie (Baker 1954 correlations)
+        ' =====================================================
+
+        ' 1. Stratified → Wavy boundary (bottom region)
+        Dim stratWavyLine As New LineSeries()
+        stratWavyLine.Title = "Strat→Wavy"
+        stratWavyLine.Color = OxyColors.Green
+        stratWavyLine.StrokeThickness = 1.5
+        ' Y = -0.121X + 9.403 for 5 ≤ X ≤ 36.3
+        For x As Double = 5 To 36.3 Step 1
+            Dim y = -0.121 * x + 9.403
+            If y > 0.1 Then stratWavyLine.Points.Add(New DataPoint(x, y))
+        Next
+        ' Y = -0.092X + 8.387 for 36.3 ≤ X ≤ 66.6
+        For x As Double = 36.3 To 66.6 Step 1
+            Dim y = -0.092 * x + 8.387
+            If y > 0.1 Then stratWavyLine.Points.Add(New DataPoint(x, y))
+        Next
+        model.Series.Add(stratWavyLine)
+
+        ' 2. Wavy/Stratified → Plug/Slug/Annular boundary
+        Dim wavyPlugLine As New LineSeries()
+        wavyPlugLine.Title = "Wavy→Slug"
+        wavyPlugLine.Color = OxyColors.DarkGreen
+        wavyPlugLine.StrokeThickness = 1.5
+        ' Y = 1.52×10⁴ × X⁻²·⁰⁸² for 11 ≤ X ≤ 300
+        For x As Double = 11 To 300 Step 5
+            Dim y = 15200 * Math.Pow(x, -2.082)
+            If y >= 0.1 AndAlso y <= 1000 Then wavyPlugLine.Points.Add(New DataPoint(x, y))
+        Next
+        model.Series.Add(wavyPlugLine)
+
+        ' 3. Plug → Slug boundary
+        Dim plugSlugLine As New LineSeries()
+        plugSlugLine.Title = "Plug→Slug"
+        plugSlugLine.Color = OxyColors.Purple
+        plugSlugLine.StrokeThickness = 1.5
+        ' Y = 3.512 × X⁻⁰·²⁴³ for 98.8 ≤ X ≤ 2213
+        For x As Double = 98.8 To 2213 Step 20
+            Dim y = 3.512 * Math.Pow(x, -0.243)
+            If y >= 0.1 AndAlso y <= 1000 Then plugSlugLine.Points.Add(New DataPoint(x, y))
+        Next
+        model.Series.Add(plugSlugLine)
+
+        ' 4. Slug → Annular boundary (multiple segments)
+        Dim slugAnnularLine As New LineSeries()
+        slugAnnularLine.Title = "Slug→Annular"
+        slugAnnularLine.Color = OxyColors.Red
+        slugAnnularLine.StrokeThickness = 1.5
+        ' Y = 214.1 × X⁻⁰·⁸⁴⁸ for 30.3 ≤ X ≤ 55.5
+        For x As Double = 30.3 To 55.5 Step 1
+            Dim y = 214.1 * Math.Pow(x, -0.848)
+            If y >= 0.1 AndAlso y <= 1000 Then slugAnnularLine.Points.Add(New DataPoint(x, y))
+        Next
+        ' Y = 21.55 × X⁻⁰·²⁷⁷ for 55.5 ≤ X ≤ 130.7
+        For x As Double = 55.5 To 130.7 Step 2
+            Dim y = 21.55 * Math.Pow(x, -0.277)
+            If y >= 0.1 AndAlso y <= 1000 Then slugAnnularLine.Points.Add(New DataPoint(x, y))
+        Next
+        ' Y = 0.008X + 4.652 for 130.7 ≤ X ≤ 868.5
+        For x As Double = 130.7 To 868.5 Step 20
+            Dim y = 0.008 * x + 4.652
+            If y >= 0.1 AndAlso y <= 1000 Then slugAnnularLine.Points.Add(New DataPoint(x, y))
+        Next
+        ' Y = 0.006X + 6.605 for 868.5 ≤ X ≤ 2975
+        For x As Double = 868.5 To 2975 Step 50
+            Dim y = 0.006 * x + 6.605
+            If y >= 0.1 AndAlso y <= 1000 Then slugAnnularLine.Points.Add(New DataPoint(x, y))
+        Next
+        model.Series.Add(slugAnnularLine)
+
+        ' 5. Annular → Dispersed boundary
+        Dim annDispLine As New LineSeries()
+        annDispLine.Title = "Ann→Dispersed"
+        annDispLine.Color = OxyColors.Blue
+        annDispLine.StrokeThickness = 1.5
+        ' Y = 1.168×10⁴ × X⁻¹·⁰³² for 108.6 ≤ X ≤ 208
+        For x As Double = 108.6 To 208 Step 5
+            Dim y = 11680 * Math.Pow(x, -1.032)
+            If y >= 0.1 AndAlso y <= 1000 Then annDispLine.Points.Add(New DataPoint(x, y))
+        Next
+        ' Y = 188.5 × X⁻⁰·²⁵⁵ for 208 ≤ X ≤ 634.4
+        For x As Double = 208 To 634.4 Step 10
+            Dim y = 188.5 * Math.Pow(x, -0.255)
+            If y >= 0.1 AndAlso y <= 1000 Then annDispLine.Points.Add(New DataPoint(x, y))
+        Next
+        ' Y = 0.002X + 34.6 for 634.4 ≤ X ≤ 4620
+        For x As Double = 634.4 To 4620 Step 50
+            Dim y = 0.002 * x + 34.6
+            If y >= 0.1 AndAlso y <= 1000 Then annDispLine.Points.Add(New DataPoint(x, y))
+        Next
+        model.Series.Add(annDispLine)
+
+        ' 6. To Bubbly/Froth boundary
+        Dim bubblyLine As New LineSeries()
+        bubblyLine.Title = "→Bubbly"
+        bubblyLine.Color = OxyColors.Orange
+        bubblyLine.StrokeThickness = 1.5
+        ' Y = 55.83×ln(X) - 427 for 2133 ≤ X ≤ 12000
+        For x As Double = 2133 To 12000 Step 100
+            Dim y = 55.83 * Math.Log(x) - 427
+            If y >= 0.1 AndAlso y <= 1000 Then bubblyLine.Points.Add(New DataPoint(x, y))
+        Next
+        model.Series.Add(bubblyLine)
+
+        ' Add region labels as annotations
+        Dim lblDispersed As New Annotations.TextAnnotation()
+        lblDispersed.Text = "DISPERSED"
+        lblDispersed.TextPosition = New DataPoint(1000, 200)
+        lblDispersed.FontSize = 9
+        lblDispersed.TextColor = OxyColors.Blue
+        lblDispersed.StrokeThickness = 0
+        model.Annotations.Add(lblDispersed)
+
+        Dim lblAnnular As New Annotations.TextAnnotation()
+        lblAnnular.Text = "ANNULAR"
+        lblAnnular.TextPosition = New DataPoint(10, 50)
+        lblAnnular.FontSize = 9
+        lblAnnular.TextColor = OxyColors.Red
+        lblAnnular.StrokeThickness = 0
+        model.Annotations.Add(lblAnnular)
+
+        Dim lblSlug As New Annotations.TextAnnotation()
+        lblSlug.Text = "SLUG"
+        lblSlug.TextPosition = New DataPoint(200, 3)
+        lblSlug.FontSize = 9
+        lblSlug.TextColor = OxyColors.Purple
+        lblSlug.StrokeThickness = 0
+        model.Annotations.Add(lblSlug)
+
+        Dim lblStratified As New Annotations.TextAnnotation()
+        lblStratified.Text = "STRATIFIED"
+        lblStratified.TextPosition = New DataPoint(20, 1)
+        lblStratified.FontSize = 9
+        lblStratified.TextColor = OxyColors.Green
+        lblStratified.StrokeThickness = 0
+        model.Annotations.Add(lblStratified)
+
+        Dim lblBubbly As New Annotations.TextAnnotation()
+        lblBubbly.Text = "BUBBLY"
+        lblBubbly.TextPosition = New DataPoint(5000, 100)
+        lblBubbly.FontSize = 9
+        lblBubbly.TextColor = OxyColors.Orange
+        lblBubbly.StrokeThickness = 0
+        model.Annotations.Add(lblBubbly)
+
+        ' Operating point
+        If Bx > 0 AndAlso By > 0 Then
+            Dim opPoint As New ScatterSeries()
+            opPoint.Title = "Operating Point"
+            opPoint.MarkerType = MarkerType.Circle
+            opPoint.MarkerSize = 8
+            opPoint.MarkerFill = OxyColors.Red
+            opPoint.MarkerStroke = OxyColors.Black
+            opPoint.MarkerStrokeThickness = 2
+            opPoint.Points.Add(New ScatterPoint(Bx, By))
+            model.Series.Add(opPoint)
+        End If
+
+        model.LegendPosition = LegendPosition.TopRight
+        model.LegendFontSize = 7
+        model.IsLegendVisible = False  ' Hide legend to reduce clutter
+
+        Return model
+    End Function
 
 #End Region
 

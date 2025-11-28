@@ -66,6 +66,12 @@ Partial Class EditingForm_GeothermalSeparator
         Me.TabPageSizing = New System.Windows.Forms.TabPage()
         Me.TabPageResults = New System.Windows.Forms.TabPage()
         Me.TabPageEfficiency = New System.Windows.Forms.TabPage()
+        Me.TabPageCharts = New System.Windows.Forms.TabPage()
+
+        ' Charts Tab Controls
+        Me.plotBakerChart = New OxyPlot.WindowsForms.PlotView()
+        Me.lblBakerCoords = New System.Windows.Forms.Label()
+        Me.lblChartTitle = New System.Windows.Forms.Label()
 
         ' Calculation Tab Controls
         Me.lblCalcMode = New System.Windows.Forms.Label()
@@ -405,6 +411,7 @@ Partial Class EditingForm_GeothermalSeparator
         Me.TabControlParams.Controls.Add(Me.TabPageCalc)
         Me.TabControlParams.Controls.Add(Me.TabPageSizing)
         Me.TabControlParams.Controls.Add(Me.TabPageEfficiency)
+        Me.TabControlParams.Controls.Add(Me.TabPageCharts)
         Me.TabControlParams.Controls.Add(Me.TabPageResults)
         Me.TabControlParams.Dock = System.Windows.Forms.DockStyle.Fill
         Me.TabControlParams.Location = New System.Drawing.Point(3, 16)
@@ -855,6 +862,38 @@ Partial Class EditingForm_GeothermalSeparator
         Me.lblVelocityWarning.MaximumSize = New System.Drawing.Size(340, 0)
 
         ' ===============================
+        ' TabPageCharts - Baker Flow Pattern Chart
+        ' ===============================
+        Me.TabPageCharts.Controls.Add(Me.lblChartTitle)
+        Me.TabPageCharts.Controls.Add(Me.lblBakerCoords)
+        Me.TabPageCharts.Controls.Add(Me.plotBakerChart)
+        Me.TabPageCharts.Location = New System.Drawing.Point(4, 22)
+        Me.TabPageCharts.Name = "TabPageCharts"
+        Me.TabPageCharts.Padding = New System.Windows.Forms.Padding(3)
+        Me.TabPageCharts.Size = New System.Drawing.Size(370, 237)
+        Me.TabPageCharts.TabIndex = 4
+        Me.TabPageCharts.Text = "Charts"
+        Me.TabPageCharts.UseVisualStyleBackColor = True
+
+        ' Chart Title
+        Me.lblChartTitle.AutoSize = True
+        Me.lblChartTitle.Location = New System.Drawing.Point(10, 8)
+        Me.lblChartTitle.Text = "Baker Flow Pattern Map"
+        Me.lblChartTitle.Font = New System.Drawing.Font(Me.Font.FontFamily, 9, System.Drawing.FontStyle.Bold)
+
+        ' Baker Coordinates Label
+        Me.lblBakerCoords.AutoSize = True
+        Me.lblBakerCoords.Location = New System.Drawing.Point(10, 28)
+        Me.lblBakerCoords.Text = "Bx = —, By = —"
+
+        ' Baker Chart PlotView
+        Me.plotBakerChart.Location = New System.Drawing.Point(10, 48)
+        Me.plotBakerChart.Name = "plotBakerChart"
+        Me.plotBakerChart.Size = New System.Drawing.Size(350, 180)
+        Me.plotBakerChart.TabIndex = 0
+        Me.plotBakerChart.BackColor = System.Drawing.Color.White
+
+        ' ===============================
         ' Form Settings
         ' ===============================
         Me.AutoScaleDimensions = New System.Drawing.SizeF(96.0!, 96.0!)
@@ -881,6 +920,8 @@ Partial Class EditingForm_GeothermalSeparator
         Me.TabPageResults.PerformLayout()
         Me.TabPageEfficiency.ResumeLayout(False)
         Me.TabPageEfficiency.PerformLayout()
+        Me.TabPageCharts.ResumeLayout(False)
+        Me.TabPageCharts.PerformLayout()
         Me.TabControlParams.ResumeLayout(False)
         Me.GroupBoxParameters.ResumeLayout(False)
         Me.ResumeLayout(False)
@@ -1001,5 +1042,11 @@ Partial Class EditingForm_GeothermalSeparator
     Friend WithEvents lblSepPressureDrop As System.Windows.Forms.Label
     Friend WithEvents lblSepPressureDropValue As System.Windows.Forms.Label
     Friend WithEvents lblVelocityWarning As System.Windows.Forms.Label
+
+    ' Charts Tab (Baker Flow Pattern Map)
+    Friend WithEvents TabPageCharts As System.Windows.Forms.TabPage
+    Friend WithEvents lblChartTitle As System.Windows.Forms.Label
+    Friend WithEvents lblBakerCoords As System.Windows.Forms.Label
+    Friend WithEvents plotBakerChart As OxyPlot.WindowsForms.PlotView
 
 End Class

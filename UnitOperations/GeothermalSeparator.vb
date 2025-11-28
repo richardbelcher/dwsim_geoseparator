@@ -127,8 +127,16 @@ Namespace UnitOperations
 
         ''' <summary>
         ''' Inlet pipe diameter D_t [m] - used in Rating mode
+        ''' Also used as Be (inlet height) for spiral inlet: A_o = Ae × Be
         ''' </summary>
         Public Property InletPipeDiameter As Double = 0.3
+
+        ''' <summary>
+        ''' Spiral throat width Ae [m] - for separator with spiral inlet
+        ''' Inlet area A_o = Ae × Be where Be = D_t
+        ''' Default 0.654 m based on ML2 LP Separator validation
+        ''' </summary>
+        Public Property SpiralThroatWidth As Double = 0.654
 
         ''' <summary>
         ''' Design steam velocity V_T [m/s]
@@ -258,6 +266,81 @@ Namespace UnitOperations
         ''' True if velocity is within recommended range
         ''' </summary>
         Public Property VelocityInRange As Boolean = True
+
+        ''' <summary>
+        ''' Annular velocity status message
+        ''' </summary>
+        Public Property AnnularVelocityStatus As String = ""
+
+        ''' <summary>
+        ''' True if annular velocity is within recommended range
+        ''' </summary>
+        Public Property AnnularVelocityInRange As Boolean = True
+
+        ''' <summary>
+        ''' Equipment type recommendation message
+        ''' </summary>
+        Public Property EquipmentTypeRecommendation As String = ""
+
+        ''' <summary>
+        ''' True if selected equipment type matches recommendation
+        ''' </summary>
+        Public Property EquipmentTypeCorrect As Boolean = True
+
+        ''' <summary>
+        ''' List of all validation warnings
+        ''' </summary>
+        Public Property ValidationWarnings As New List(Of String)
+
+        ' === VOLUME PROPERTIES (Calculated) ===
+
+        ''' <summary>
+        ''' Separator body volume V_OS [m³]
+        ''' V_OS = π/4 × (D² - D_e²) × Z
+        ''' </summary>
+        Public Property SeparatorBodyVolume As Double
+
+        ''' <summary>
+        ''' Head volume V_OH [m³]
+        ''' </summary>
+        Public Property HeadVolume As Double
+
+        ''' <summary>
+        ''' Water drum length L_WD [m]
+        ''' </summary>
+        Public Property WaterDrumLength As Double
+
+        ''' <summary>
+        ''' Water drum volume V_WD [m³]
+        ''' </summary>
+        Public Property WaterDrumVolume As Double
+
+        ''' <summary>
+        ''' Minimum residence time t_mi [s]
+        ''' </summary>
+        Public Property MinResidenceTime As Double
+
+        ''' <summary>
+        ''' Additional residence time in head t_ma [s]
+        ''' </summary>
+        Public Property AdditionalResidenceTime As Double
+
+        ''' <summary>
+        ''' Total residence time t_r [s]
+        ''' </summary>
+        Public Property TotalResidenceTime As Double
+
+        ' === BAKER CHART PROPERTIES ===
+
+        ''' <summary>
+        ''' Baker chart X coordinate (Bx)
+        ''' </summary>
+        Public Property BakerBx As Double
+
+        ''' <summary>
+        ''' Baker chart Y coordinate (By)
+        ''' </summary>
+        Public Property BakerBy As Double
 
 #End Region
 
@@ -1576,6 +1659,9 @@ Namespace UnitOperations
 
         ''' <summary>
         ''' Calculates separator dimensions based on Lazalde-Crabtree ratios
+        ''' Per ML2 spreadsheet methodology:
+        '''   - Separator: A_o = Ae × Be where Be = D_t (spiral inlet)
+        '''   - Dryer: A_o = π×D_t²/4 (circular tangential inlet)
         ''' </summary>
         Private Sub CalculateSeparatorDimensions()
             Dim D_t As Double = Me.InletPipeDiameter
@@ -1588,8 +1674,12 @@ Namespace UnitOperations
                 Me.LipPosition = -0.15 * D_t
                 Me.CycloneHeight = 3.5 * D_t
                 Me.TotalHeight = 5.5 * D_t
-                ' Spiral inlet area ≈ D_t²
-                Me.InletArea = D_t * D_t
+
+                ' Spiral inlet area: A_o = Ae × Be where Be = D_t
+                ' Per ML2 spreadsheet methodology (validated)
+                Dim Ae As Double = Me.SpiralThroatWidth  ' Spiral throat width [m]
+                Dim Be As Double = D_t                    ' Height = inlet pipe equivalent diameter [m]
+                Me.InletArea = Ae * Be
             Else
                 ' Dryer (X_i > 95%)
                 Me.VesselDiameter = 3.5 * D_t
@@ -1598,7 +1688,7 @@ Namespace UnitOperations
                 Me.LipPosition = -0.15 * D_t
                 Me.CycloneHeight = 3.0 * D_t
                 Me.TotalHeight = 4.0 * D_t
-                ' Tangential inlet area = π×D_t²/4
+                ' Tangential inlet area = π×D_t²/4 (circular pipe)
                 Me.InletArea = Math.PI * D_t * D_t / 4
             End If
         End Sub
@@ -1626,22 +1716,30 @@ Namespace UnitOperations
                 Dim T As Double = MixedStream.Phases(0).Properties.temperature.GetValueOrDefault - 273.15  ' Convert K to °C
                 Dim P As Double = MixedStream.Phases(0).Properties.pressure.GetValueOrDefault
 
-                ' Surface tension - use Vargaftic et al. (1983) correlation
-                ' Reference: Zarrouk & Purnanto (2014), Eq. 24
-                ' σ = Y × [(Tc - (T+273.15))/Tc]^k × [1 + b×(Tc - (T+273.15))/Tc]
-                ' Where: Tc = 647.15K, Y = 235.8×10^-3 N/m, b = -0.625, k = 1.256
+                ' Surface tension - try property package first, fall back to Vargaftik correlation
+                ' In DWSIM, use MaterialStream.Phases(phase).Properties.surfaceTension if available
+                ' Reference: Zarrouk & Purnanto (2014), Eq. 24 (Vargaftik et al. 1983)
                 Dim sigma_L As Double = 0.0554  ' Default at ~155°C
                 Try
-                    Const Tc As Double = 647.15      ' Critical temperature [K]
-                    Const Y As Double = 0.2358       ' 235.8×10^-3 N/m
-                    Const b_surf As Double = -0.625  ' Coefficient
-                    Const k_surf As Double = 1.256   ' Exponent
+                    ' Try to get surface tension from property package
+                    Dim sigma_from_pp As Double = MixedStream.Phases(0).Properties.surfaceTension.GetValueOrDefault
+                    If sigma_from_pp > 0.001 AndAlso sigma_from_pp < 0.1 Then
+                        sigma_L = sigma_from_pp
+                    Else
+                        ' Fall back to Vargaftik et al. (1983) correlation (Eq. 24)
+                        ' σ = Y × [(Tc - T_K)/Tc]^k × [1 + b×(Tc - T_K)/Tc]
+                        ' Where: Tc = 647.15K, Y = 235.8×10^-3 N/m, b = -0.625, k = 1.256
+                        Const Tc As Double = 647.15      ' Critical temperature [K]
+                        Const Y As Double = 0.2358       ' 235.8×10^-3 N/m
+                        Const b_surf As Double = -0.625  ' Coefficient
+                        Const k_surf As Double = 1.256   ' Exponent
 
-                    Dim T_K As Double = T + 273.15   ' Convert °C to K
-                    If T_K >= Tc Then T_K = Tc - 1   ' Prevent negative under critical point
+                        Dim T_K As Double = T + 273.15   ' Convert °C to K
+                        If T_K >= Tc Then T_K = Tc - 1   ' Prevent negative under critical point
 
-                    Dim tau As Double = (Tc - T_K) / Tc
-                    sigma_L = Y * Math.Pow(tau, k_surf) * (1 + b_surf * tau)
+                        Dim tau As Double = (Tc - T_K) / Tc
+                        sigma_L = Y * Math.Pow(tau, k_surf) * (1 + b_surf * tau)
+                    End If
 
                     If sigma_L < 0.001 Then sigma_L = 0.001
                     If sigma_L > 0.076 Then sigma_L = 0.076  ' Max at 0°C
@@ -1679,6 +1777,11 @@ Namespace UnitOperations
                         Me.InletPipeDiameter = Math.Round(Me.InletPipeDiameter, 2)
                         If Me.InletPipeDiameter < 0.1 Then Me.InletPipeDiameter = 0.1
                         If Me.InletPipeDiameter > 2.0 Then Me.InletPipeDiameter = 2.0
+
+                        ' Auto-size spiral throat width Ae
+                        ' Based on ML2 validation: Ae ≈ 0.93 × D_t (typical ratio)
+                        ' A_o = Ae × Be where Be = D_t, so A_o ≈ 0.93 × D_t²
+                        Me.SpiralThroatWidth = 0.93 * Me.InletPipeDiameter
                     End If
                 End If
 
@@ -1737,8 +1840,25 @@ Namespace UnitOperations
                                                                   Me.InletArea, D_e,
                                                                   Me.EquipmentType, Me.InletPipeDiameter)
 
-                ' Validate velocity
-                ValidateVelocity()
+                ' Update vapor outlet stream pressure (inlet pressure minus pressure drop)
+                Dim cpVapor = Me.GraphicObject.OutputConnectors(0)
+                If cpVapor.IsAttached Then
+                    Dim vaporStream = Me.GetOutletMaterialStream(0)
+                    Dim P_outlet As Double = P - Me.SeparatorPressureDrop
+                    If P_outlet < 0 Then P_outlet = P * 0.9  ' Minimum 90% of inlet if drop is too large
+                    vaporStream.SetPressure(P_outlet)
+                    vaporStream.Phases(0).Properties.pressure = P_outlet
+                End If
+
+                ' Calculate volumes for residence time
+                CalculateVolumes(D, D_e, Me.TotalHeight, Me.LipPosition, Q_VS)
+
+                ' Store Baker coordinates for chart visualization
+                Dim bakerCoords = GetBakerCoordinates(W_V, W_L, rho_V, rho_L, sigma_L, mu_L, A_pipe)
+                StoreBakerCoordinates(bakerCoords.Bx, bakerCoords.By)
+
+                ' Validate design (velocities, equipment type, outlet quality)
+                ValidateDesign()
 
             Catch ex As Exception
                 ' Log error but don't fail the calculation
@@ -1748,32 +1868,219 @@ Namespace UnitOperations
         End Sub
 
         ''' <summary>
-        ''' Validates steam velocity against recommended ranges
+        ''' Validates design against recommended ranges per Lazalde-Crabtree
         ''' </summary>
-        Private Sub ValidateVelocity()
+        Private Sub ValidateDesign()
+            Me.ValidationWarnings.Clear()
+
+            ' === 1. Validate inlet steam velocity V_T ===
             Dim V_T As Double = Me.ActualSteamVelocity
-            Dim minV As Double
-            Dim maxV As Double
+            Dim minV_T As Double
+            Dim maxV_T As Double
+            Dim absMaxV_T As Double
 
             If Me.EquipmentType = SeparatorType.Separator Then
-                minV = 25
-                maxV = 45
+                minV_T = 25
+                maxV_T = 40
+                absMaxV_T = 45
             Else
-                minV = 35
-                maxV = 60
+                minV_T = 35
+                maxV_T = 50
+                absMaxV_T = 60
             End If
 
-            If V_T < minV Then
-                Me.VelocityStatus = String.Format("WARNING: V_T = {0:F1} m/s is below recommended {1} m/s minimum", V_T, minV)
+            If V_T > absMaxV_T Then
+                Me.VelocityStatus = String.Format("ERROR: V_T = {0:F1} m/s exceeds maximum {1} m/s", V_T, absMaxV_T)
                 Me.VelocityInRange = False
-            ElseIf V_T > maxV Then
-                Me.VelocityStatus = String.Format("WARNING: V_T = {0:F1} m/s exceeds recommended {1} m/s maximum", V_T, maxV)
+                Me.ValidationWarnings.Add(Me.VelocityStatus)
+            ElseIf V_T > maxV_T Then
+                Me.VelocityStatus = String.Format("WARNING: V_T = {0:F1} m/s above recommended {1} m/s", V_T, maxV_T)
                 Me.VelocityInRange = False
+                Me.ValidationWarnings.Add(Me.VelocityStatus)
+            ElseIf V_T < minV_T Then
+                Me.VelocityStatus = String.Format("WARNING: V_T = {0:F1} m/s below recommended {1} m/s", V_T, minV_T)
+                Me.VelocityInRange = False
+                Me.ValidationWarnings.Add(Me.VelocityStatus)
             Else
-                Me.VelocityStatus = String.Format("V_T = {0:F1} m/s is within recommended range ({1}-{2} m/s)", V_T, minV, maxV)
+                Me.VelocityStatus = String.Format("V_T = {0:F1} m/s OK ({1}-{2} m/s)", V_T, minV_T, maxV_T)
                 Me.VelocityInRange = True
             End If
+
+            ' === 2. Validate annular velocity V_AN ===
+            Dim V_AN As Double = Me.AnnularVelocity
+            Dim minV_AN As Double
+            Dim maxV_AN As Double
+            Dim absMaxV_AN As Double
+
+            If Me.EquipmentType = SeparatorType.Separator Then
+                minV_AN = 2.5
+                maxV_AN = 4.0
+                absMaxV_AN = 4.5
+            Else
+                minV_AN = 1.2
+                maxV_AN = 4.0
+                absMaxV_AN = 6.0
+            End If
+
+            If V_AN > absMaxV_AN Then
+                Me.AnnularVelocityStatus = String.Format("ERROR: V_AN = {0:F2} m/s exceeds maximum {1} m/s", V_AN, absMaxV_AN)
+                Me.AnnularVelocityInRange = False
+                Me.ValidationWarnings.Add(Me.AnnularVelocityStatus)
+            ElseIf V_AN > maxV_AN Then
+                Me.AnnularVelocityStatus = String.Format("WARNING: V_AN = {0:F2} m/s above recommended {1} m/s", V_AN, maxV_AN)
+                Me.AnnularVelocityInRange = False
+                Me.ValidationWarnings.Add(Me.AnnularVelocityStatus)
+            ElseIf V_AN < minV_AN Then
+                Me.AnnularVelocityStatus = String.Format("WARNING: V_AN = {0:F2} m/s below recommended {1} m/s", V_AN, minV_AN)
+                Me.AnnularVelocityInRange = False
+                Me.ValidationWarnings.Add(Me.AnnularVelocityStatus)
+            Else
+                Me.AnnularVelocityStatus = String.Format("V_AN = {0:F2} m/s OK ({1}-{2} m/s)", V_AN, minV_AN, maxV_AN)
+                Me.AnnularVelocityInRange = True
+            End If
+
+            ' === 3. Validate equipment type selection ===
+            Dim X_i As Double = Me.InletSteamQuality
+            Dim recommendedType As SeparatorType
+
+            If X_i < 0.95 Then
+                recommendedType = SeparatorType.Separator
+            Else
+                recommendedType = SeparatorType.Dryer
+            End If
+
+            If Me.EquipmentType <> recommendedType Then
+                If recommendedType = SeparatorType.Separator Then
+                    Me.EquipmentTypeRecommendation = String.Format("WARNING: X_i = {0:F1}% suggests Separator (spiral inlet)", X_i * 100)
+                Else
+                    Me.EquipmentTypeRecommendation = String.Format("WARNING: X_i = {0:F1}% suggests Dryer (tangential inlet)", X_i * 100)
+                End If
+                Me.EquipmentTypeCorrect = False
+                Me.ValidationWarnings.Add(Me.EquipmentTypeRecommendation)
+            Else
+                If Me.EquipmentType = SeparatorType.Separator Then
+                    Me.EquipmentTypeRecommendation = String.Format("Separator type OK for X_i = {0:F1}%", X_i * 100)
+                Else
+                    Me.EquipmentTypeRecommendation = String.Format("Dryer type OK for X_i = {0:F1}%", X_i * 100)
+                End If
+                Me.EquipmentTypeCorrect = True
+            End If
+
+            ' === 4. Validate outlet quality ===
+            If Me.OutletSteamQuality < 0.999 Then
+                Dim warning = String.Format("WARNING: X_o = {0:F4}% below target 99.9%", Me.OutletSteamQuality * 100)
+                Me.ValidationWarnings.Add(warning)
+            End If
+
+            ' === 5. Check for breakdown point (high velocity leading to efficiency drop) ===
+            ' Breakdown occurs when entrainment efficiency starts dropping significantly
+            If Me.EntrainmentEfficiency < 0.999 Then
+                Dim warning = String.Format("WARNING: Approaching breakdown - η_A = {0:F4}%", Me.EntrainmentEfficiency * 100)
+                Me.ValidationWarnings.Add(warning)
+            End If
         End Sub
+
+        ''' <summary>
+        ''' Legacy method for backward compatibility - calls ValidateDesign
+        ''' </summary>
+        Private Sub ValidateVelocity()
+            ValidateDesign()
+        End Sub
+
+        ''' <summary>
+        ''' Calculates volume properties per Lazalde-Crabtree
+        ''' </summary>
+        Private Sub CalculateVolumes(D As Double, D_e As Double, Z As Double, alpha As Double, Q_VS As Double)
+            ' Separator body volume: V_OS = π/4 × (D² - D_e²) × Z
+            Me.SeparatorBodyVolume = Math.PI / 4 * (D * D - D_e * D_e) * Z
+
+            ' Head volume calculation (ASME flanged & dished)
+            ' V_head = 0.081 × D³
+            Dim V_head As Double = 0.081 * D * D * D
+
+            ' Head rise height
+            Dim head_rise As Double = 0.169 * D
+
+            ' Volume of outlet tube extending into head
+            Dim V_tube As Double = Math.PI / 4 * D_e * D_e * (Math.Abs(alpha) + head_rise)
+
+            ' Net head volume
+            Me.HeadVolume = V_head - V_tube
+            If Me.HeadVolume < 0 Then Me.HeadVolume = 0
+
+            ' Water drum length
+            Me.WaterDrumLength = (Me.CycloneHeight + Z) / 3
+
+            ' Water drum volume
+            Me.WaterDrumVolume = Math.PI / 4 * D * D * Me.WaterDrumLength
+
+            ' Residence times
+            If Q_VS > 0 Then
+                Me.MinResidenceTime = Me.SeparatorBodyVolume / Q_VS
+                Me.AdditionalResidenceTime = Me.HeadVolume / Q_VS
+                Me.TotalResidenceTime = Me.MinResidenceTime + Me.AdditionalResidenceTime / 2
+            Else
+                Me.MinResidenceTime = 0
+                Me.AdditionalResidenceTime = 0
+                Me.TotalResidenceTime = 0
+            End If
+        End Sub
+
+        ''' <summary>
+        ''' Stores Baker chart coordinates for visualization
+        ''' </summary>
+        Private Sub StoreBakerCoordinates(Bx As Double, By As Double)
+            Me.BakerBx = Bx
+            Me.BakerBy = By
+        End Sub
+
+        ''' <summary>
+        ''' Generates performance curve data (efficiency vs flow rate)
+        ''' Returns list of (W_M, eta_ef) tuples
+        ''' </summary>
+        Public Function GeneratePerformanceCurve(numPoints As Integer) As List(Of Tuple(Of Double, Double))
+            Dim curve As New List(Of Tuple(Of Double, Double))
+
+            If MixedStream Is Nothing Then Return curve
+
+            ' Get current operating conditions
+            Dim W_M_current As Double = MixedStream.Phases(0).Properties.massflow.GetValueOrDefault
+            If W_M_current <= 0 Then Return curve
+
+            ' Generate curve from 10% to 200% of current flow
+            Dim W_M_min As Double = 0.1 * W_M_current
+            Dim W_M_max As Double = 2.0 * W_M_current
+            Dim step_size As Double = (W_M_max - W_M_min) / (numPoints - 1)
+
+            ' Store current values to restore later
+            Dim current_eta_ef As Double = Me.OverallEfficiency
+
+            For i As Integer = 0 To numPoints - 1
+                Dim W_M As Double = W_M_min + i * step_size
+
+                ' Calculate efficiency at this flow rate
+                ' Scale velocities proportionally with flow
+                Dim scale As Double = W_M / W_M_current
+
+                ' V_T scales with Q_VS which scales with W_M
+                Dim V_T_scaled As Double = Me.ActualSteamVelocity * scale
+                Dim V_AN_scaled As Double = Me.AnnularVelocity * scale
+
+                ' Recalculate efficiencies at scaled conditions
+                ' This is a simplified calculation - full recalc would need flash at each point
+                Dim eta_A As Double = CalculateEntrainmentEfficiency(V_AN_scaled)
+
+                ' For centrifugal efficiency, approximate using velocity dependence
+                ' η_m is less sensitive to velocity changes, so use interpolation
+                Dim eta_m As Double = Me.CentrifugalEfficiency ' Approximate as constant for curve
+
+                Dim eta_ef As Double = eta_m * eta_A
+
+                curve.Add(New Tuple(Of Double, Double)(W_M, eta_ef))
+            Next
+
+            Return curve
+        End Function
 
 #End Region
 
