@@ -513,6 +513,11 @@ Module TestLazaldeCrabtreePaperValidation
         Console.WriteLine()
         Console.WriteLine()
         DropDiameterAnalysis.RunAnalysis()
+
+        ' Run ML2 LP Separator validation
+        Console.WriteLine()
+        Console.WriteLine()
+        ML2Validation.RunML2Validation()
     End Sub
 
 End Module
