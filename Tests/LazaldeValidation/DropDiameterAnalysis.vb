@@ -226,51 +226,73 @@ Module DropDiameterAnalysis
         Console.WriteLine($"    G_L = W_L/A = {(1 - X_i) * 52.87:F2}/{A_pipe:F6} = {G_L:F2} kg/(m²·s)")
         Console.WriteLine()
 
-        ' Baker parameters
+        ' Baker parameters - Standard Baker (1954) formulation
+        ' Reference: GeothermalSeparator.vb lines 1230-1235
         Dim lambda As Double = Math.Sqrt((rho_V / rho_A) * (rho_L / rho_W))
-        Dim psi As Double = (sigma_W / sigma) * Math.Pow(mu_L / mu_W, 0.5) * Math.Pow(rho_W / rho_L, 2)
+        Dim visc_dens_term As Double = (mu_L / mu_W) * Math.Pow(rho_W / rho_L, 2)
+        Dim psi As Double = (sigma_W / sigma) * Math.Pow(visc_dens_term, 1.0 / 3.0)  ' Note: 1/3 exponent!
 
-        Console.WriteLine($"  Baker parameters:")
+        Console.WriteLine($"  Baker parameters (Standard Baker 1954):")
         Console.WriteLine($"    λ = √[(ρ_V/ρ_A) × (ρ_L/ρ_W)]")
         Console.WriteLine($"      = √[({rho_V:F3}/{rho_A:F2}) × ({rho_L:F1}/{rho_W:F1})]")
         Console.WriteLine($"      = √[{rho_V / rho_A:F4} × {rho_L / rho_W:F4}]")
         Console.WriteLine($"      = {lambda:F4}")
         Console.WriteLine()
-        Console.WriteLine($"    ψ = (σ_W/σ) × (μ_L/μ_W)^0.5 × (ρ_W/ρ_L)²")
-        Console.WriteLine($"      = ({sigma_W:F4}/{sigma:F4}) × ({mu_L:F6}/{mu_W:F4})^0.5 × ({rho_W:F1}/{rho_L:F1})²")
-        Console.WriteLine($"      = {sigma_W / sigma:F4} × {Math.Pow(mu_L / mu_W, 0.5):F4} × {Math.Pow(rho_W / rho_L, 2):F4}")
+        Console.WriteLine($"    ψ = (σ_W/σ) × [(μ_L/μ_W) × (ρ_W/ρ_L)²]^(1/3)")
+        Console.WriteLine($"      = ({sigma_W:F4}/{sigma:F4}) × [({mu_L:F6}/{mu_W:F4}) × ({rho_W:F1}/{rho_L:F1})²]^(1/3)")
+        Console.WriteLine($"      = {sigma_W / sigma:F4} × [{mu_L / mu_W:F4} × {Math.Pow(rho_W / rho_L, 2):F4}]^(1/3)")
+        Console.WriteLine($"      = {sigma_W / sigma:F4} × [{visc_dens_term:F4}]^(1/3)")
+        Console.WriteLine($"      = {sigma_W / sigma:F4} × {Math.Pow(visc_dens_term, 1.0 / 3.0):F4}")
         Console.WriteLine($"      = {psi:F4}")
         Console.WriteLine()
 
-        ' Baker coordinates
-        Dim X_baker As Double = G_L * psi / lambda  ' Abscissa
-        Dim Y_baker As Double = G_V * lambda        ' Ordinate
+        ' Baker coordinates - Standard Baker (1954) formulation
+        Dim Bx As Double = (G_L / G_V) * (rho_V / rho_A) * Math.Sqrt(rho_L / rho_W)
+        Dim By As Double = G_V / (lambda * psi)
 
         Console.WriteLine($"  Baker map coordinates:")
-        Console.WriteLine($"    X = G_L × ψ / λ = {G_L:F2} × {psi:F4} / {lambda:F4} = {X_baker:F1}")
-        Console.WriteLine($"    Y = G_V × λ = {G_V:F2} × {lambda:F4} = {Y_baker:F1}")
+        Console.WriteLine($"    Bx = (G_L/G_V) × (ρ_V/ρ_A) × √(ρ_L/ρ_W)")
+        Console.WriteLine($"       = ({G_L:F2}/{G_V:F2}) × ({rho_V:F3}/{rho_A:F2}) × √({rho_L:F1}/{rho_W:F1})")
+        Console.WriteLine($"       = {G_L / G_V:F4} × {rho_V / rho_A:F4} × {Math.Sqrt(rho_L / rho_W):F4}")
+        Console.WriteLine($"       = {Bx:F2}")
+        Console.WriteLine($"    By = G_V / (λ × ψ)")
+        Console.WriteLine($"       = {G_V:F2} / ({lambda:F4} × {psi:F4})")
+        Console.WriteLine($"       = {G_V:F2} / {lambda * psi:F4}")
+        Console.WriteLine($"       = {By:F2}")
         Console.WriteLine()
 
-        ' Flow pattern boundaries (approximate from Baker map)
-        Console.WriteLine("  Baker map boundaries (approximate):")
-        Console.WriteLine("    Annular:    Y > 100, X < 10000")
-        Console.WriteLine("    Dispersed:  Y < 100, X > 5000")
-        Console.WriteLine("    Stratified: Y < 10,  X < 1000")
-        Console.WriteLine("    Plug/Slug:  10 < Y < 100, X < 1000")
+        ' Flow pattern boundaries from GeothermalSeparator.vb (lines 1245-1267)
+        Console.WriteLine("  Flow pattern boundaries (from GeothermalSeparator.vb):")
+        Console.WriteLine("    Dispersed:  Bx > 4000 AND By > 5.1 × √Bx")
+        Console.WriteLine("    Annular:    Bx < 0.5 AND By > 2040/Bx^0.8")
+        Console.WriteLine("    Stratified: Bx > 10 AND By < 10")
+        Console.WriteLine("    Plug/Slug:  Bx > 1 AND By < 800/Bx")
+        Console.WriteLine("    Default:    Annular (for geothermal conditions)")
         Console.WriteLine()
 
-        Console.WriteLine($"  With X = {X_baker:F1}, Y = {Y_baker:F1}:")
-        If Y_baker > 100 AndAlso X_baker < 10000 Then
-            Console.WriteLine("    → ANNULAR flow pattern (d_w = 290 μm)")
-        ElseIf Y_baker < 100 AndAlso X_baker > 5000 Then
-            Console.WriteLine("    → DISPERSED flow pattern (d_w = 116 μm)")
-        ElseIf Y_baker < 10 AndAlso X_baker < 1000 Then
-            Console.WriteLine("    → STRATIFIED flow pattern")
-        ElseIf Y_baker >= 10 AndAlso Y_baker <= 100 AndAlso X_baker < 1000 Then
-            Console.WriteLine("    → PLUG/SLUG flow pattern")
+        ' Determine flow pattern using same logic as GeothermalSeparator.vb
+        Dim flowPattern As String = ""
+        Dim d_w_for_pattern As Double = 0
+
+        If Bx > 4000 AndAlso By > 5.1 * Math.Sqrt(Bx) Then
+            flowPattern = "DISPERSED"
+            d_w_for_pattern = 116
+        ElseIf Bx < 0.5 AndAlso By > 2040 / Math.Pow(Bx, 0.8) Then
+            flowPattern = "ANNULAR"
+            d_w_for_pattern = 290
+        ElseIf Bx > 10 AndAlso By < 10 Then
+            flowPattern = "STRATIFIED"
+            d_w_for_pattern = 1810
+        ElseIf Bx > 1 AndAlso By < 800 / Bx Then
+            flowPattern = "PLUG/SLUG"
+            d_w_for_pattern = 293
         Else
-            Console.WriteLine("    → TRANSITION region (between patterns)")
+            flowPattern = "ANNULAR (default)"
+            d_w_for_pattern = 290
         End If
+
+        Console.WriteLine($"  With Bx = {Bx:F2}, By = {By:F2}:")
+        Console.WriteLine($"    → {flowPattern} flow pattern (d_w = {d_w_for_pattern} μm)")
         Console.WriteLine()
 
         Console.WriteLine("═══════════════════════════════════════════════════════════════")
@@ -281,8 +303,8 @@ Module DropDiameterAnalysis
         Console.WriteLine("  │                    ROOT CAUSE IDENTIFIED                    │")
         Console.WriteLine("  └─────────────────────────────────────────────────────────────┘")
         Console.WriteLine()
-        Console.WriteLine("  1. Baker map says: ANNULAR flow (Y=115 > 100)")
-        Console.WriteLine("     → Eq. 23 with Annular constants gives d_w = 290 μm")
+        Console.WriteLine($"  1. Baker map (Bx={Bx:F1}, By={By:F1}) → {flowPattern}")
+        Console.WriteLine($"     → Eq. 23 with {flowPattern} constants gives d_w = {d_w_for_pattern} μm")
         Console.WriteLine()
         Console.WriteLine("  2. Paper's η_m = 99.9973% implies d_w ≈ 107-112 μm")
         Console.WriteLine("     → This matches DISPERSED flow pattern (d_w = 116 μm)")
