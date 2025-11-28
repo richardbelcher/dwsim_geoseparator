@@ -33,27 +33,56 @@ Module TestLazaldeCrabtreePaperValidation
 
         ' Operating conditions
         Dim P As Double = 547700  ' Pa (547.7 kPa = 79.4 psia)
-        Dim T As Double = 155.0   ' °C (saturation at 547.7 kPa)
         Dim W_M As Double = 52.87  ' kg/s total mass flow
         Dim X_i As Double = 0.0756  ' inlet quality (7.56%)
 
         Console.WriteLine($"  Pressure P        = {P / 1000:F1} kPa ({P / 6894.76:F1} psia)")
-        Console.WriteLine($"  Temperature T     = {T:F1} °C")
         Console.WriteLine($"  Total mass W_M    = {W_M:F2} kg/s")
         Console.WriteLine($"  Inlet quality X_i = {X_i * 100:F2}%")
         Console.WriteLine()
 
-        ' Steam properties at 547.7 kPa (from steam tables / paper)
-        Dim rho_V As Double = 2.973  ' kg/m³ (steam density)
-        Dim rho_L As Double = 876.7  ' kg/m³ (liquid density)
-        Dim mu_L As Double = 0.000135  ' Pa·s (liquid viscosity)
-        Dim mu_V As Double = 0.0000135  ' Pa·s (steam viscosity)
+        ' =====================================================
+        ' FLUID PROPERTIES FROM COOLPROP
+        ' =====================================================
+        ' NOTE: In DWSIM unit operation, replace with:
+        '   MaterialStream.Phases(phase).Properties.density
+        '   MaterialStream.Phases(phase).Properties.viscosity
+        '   MaterialStream.Phases(phase).Properties.surfaceTension
+        ' =====================================================
+        Console.WriteLine("╔══════════════════════════════════════════════════════════════╗")
+        Console.WriteLine("║        FLUID PROPERTIES FROM COOLPROP                        ║")
+        Console.WriteLine("╚══════════════════════════════════════════════════════════════╝")
+        Console.WriteLine()
+        Console.WriteLine("  NOTE: In DWSIM, use MaterialStream.Phases(phase).Properties")
+        Console.WriteLine("        instead of CoolProp for thermodynamic properties.")
+        Console.WriteLine()
 
-        Console.WriteLine("  Steam Properties at 547.7 kPa:")
-        Console.WriteLine($"    ρ_V (steam)     = {rho_V:F3} kg/m³")
-        Console.WriteLine($"    ρ_L (liquid)    = {rho_L:F1} kg/m³")
-        Console.WriteLine($"    μ_V (steam)     = {mu_V * 1000000:F2} μPa·s")
-        Console.WriteLine($"    μ_L (liquid)    = {mu_L * 1000:F4} mPa·s")
+        ' Get properties from CoolProp
+        Dim props = SteamProperties.GetSeparatorProperties(P)
+
+        ' Use CoolProp values
+        Dim T As Double = props.Temperature       ' °C (saturation temperature from CoolProp)
+        Dim rho_V As Double = props.VaporDensity  ' kg/m³
+        Dim rho_L As Double = props.LiquidDensity ' kg/m³
+        Dim mu_V As Double = props.VaporViscosity ' Pa·s
+        Dim mu_L As Double = props.LiquidViscosity ' Pa·s
+
+        ' Paper values for comparison
+        Dim paper_T As Double = 155.0
+        Dim paper_rho_V As Double = 2.973
+        Dim paper_rho_L As Double = 876.7
+        Dim paper_mu_V As Double = 0.0000135
+        Dim paper_mu_L As Double = 0.000135
+
+        Console.WriteLine("  Property          │ CoolProp      │ Paper         │ Diff %")
+        Console.WriteLine("  ──────────────────┼───────────────┼───────────────┼────────")
+        Console.WriteLine($"  T_sat (°C)        │ {T,10:F2}    │ {paper_T,10:F2}    │ {(T - paper_T) / paper_T * 100:F2}%")
+        Console.WriteLine($"  ρ_V (kg/m³)       │ {rho_V,10:F4}  │ {paper_rho_V,10:F4}  │ {(rho_V - paper_rho_V) / paper_rho_V * 100:F2}%")
+        Console.WriteLine($"  ρ_L (kg/m³)       │ {rho_L,10:F2}  │ {paper_rho_L,10:F2}  │ {(rho_L - paper_rho_L) / paper_rho_L * 100:F2}%")
+        Console.WriteLine($"  μ_V (Pa·s)        │ {mu_V,10:E3} │ {paper_mu_V,10:E3} │ {(mu_V - paper_mu_V) / paper_mu_V * 100:F2}%")
+        Console.WriteLine($"  μ_L (Pa·s)        │ {mu_L,10:E3} │ {paper_mu_L,10:E3} │ {(mu_L - paper_mu_L) / paper_mu_L * 100:F2}%")
+        Console.WriteLine()
+        Console.WriteLine($"  Temperature T     = {T:F2} °C (from CoolProp saturation)")
         Console.WriteLine()
 
         ' =====================================================

@@ -32,29 +32,59 @@ Module ML2Validation
 
         ' Operating conditions
         Dim P As Double = 490000      ' Pa (4.90 bar a)
-        Dim T As Double = 150.75      ' °C
         Dim W_M As Double = 423.90    ' kg/s total mass flow
         Dim X_i As Double = 0.09      ' inlet quality (9%)
 
         Console.WriteLine($"  Pressure P        = {P / 100000:F2} bar a ({P / 1000:F0} kPa)")
-        Console.WriteLine($"  Temperature T     = {T:F2} °C")
         Console.WriteLine($"  Total mass W_M    = {W_M:F2} kg/s ({W_M * 3.6:F0} t/h)")
         Console.WriteLine($"  Inlet quality X_i = {X_i * 100:F0}%")
         Console.WriteLine()
 
-        ' Fluid properties from spreadsheet
-        Dim rho_V As Double = 2.61     ' kg/m³ (steam density)
-        Dim rho_L As Double = 915.73   ' kg/m³ (liquid density)
-        Dim mu_L As Double = 0.000179  ' Pa·s (liquid viscosity)
-        Dim mu_V As Double = 0.000014  ' Pa·s (steam viscosity)
-        Dim sigma As Double = 0.04848  ' N/m (48.48 dyne/cm)
+        ' =====================================================
+        ' FLUID PROPERTIES FROM COOLPROP
+        ' =====================================================
+        ' NOTE: In DWSIM unit operation, replace with:
+        '   MaterialStream.Phases(phase).Properties.density
+        '   MaterialStream.Phases(phase).Properties.viscosity
+        '   MaterialStream.Phases(phase).Properties.surfaceTension
+        ' =====================================================
+        Console.WriteLine("╔══════════════════════════════════════════════════════════════╗")
+        Console.WriteLine("║        FLUID PROPERTIES FROM COOLPROP                        ║")
+        Console.WriteLine("╚══════════════════════════════════════════════════════════════╝")
+        Console.WriteLine()
+        Console.WriteLine("  NOTE: In DWSIM, use MaterialStream.Phases(phase).Properties")
+        Console.WriteLine("        instead of CoolProp for thermodynamic properties.")
+        Console.WriteLine()
 
-        Console.WriteLine("  Fluid Properties at 4.90 bar:")
-        Console.WriteLine($"    ρ_V (steam)     = {rho_V:F2} kg/m³")
-        Console.WriteLine($"    ρ_L (liquid)    = {rho_L:F2} kg/m³")
-        Console.WriteLine($"    μ_V (steam)     = {mu_V * 1000000:F2} μPa·s")
-        Console.WriteLine($"    μ_L (liquid)    = {mu_L * 1000:F4} mPa·s")
-        Console.WriteLine($"    σ (surface)     = {sigma * 1000:F2} mN/m")
+        ' Get properties from CoolProp
+        Dim props = SteamProperties.GetSeparatorProperties(P)
+
+        ' Use CoolProp values
+        Dim T As Double = props.Temperature        ' °C (saturation temperature)
+        Dim rho_V As Double = props.VaporDensity   ' kg/m³
+        Dim rho_L As Double = props.LiquidDensity  ' kg/m³
+        Dim mu_V As Double = props.VaporViscosity  ' Pa·s
+        Dim mu_L As Double = props.LiquidViscosity ' Pa·s
+        Dim sigma As Double = props.SurfaceTension ' N/m (from Vargaftik Eq. 24)
+
+        ' Spreadsheet values for comparison
+        Dim ss_T As Double = 150.75
+        Dim ss_rho_V As Double = 2.61
+        Dim ss_rho_L As Double = 915.73
+        Dim ss_mu_V As Double = 0.000014
+        Dim ss_mu_L As Double = 0.000179
+        Dim ss_sigma As Double = 0.04848
+
+        Console.WriteLine("  Property          │ CoolProp      │ Spreadsheet   │ Diff %")
+        Console.WriteLine("  ──────────────────┼───────────────┼───────────────┼────────")
+        Console.WriteLine($"  T_sat (°C)        │ {T,10:F2}    │ {ss_T,10:F2}    │ {(T - ss_T) / ss_T * 100:F2}%")
+        Console.WriteLine($"  ρ_V (kg/m³)       │ {rho_V,10:F4}  │ {ss_rho_V,10:F4}  │ {(rho_V - ss_rho_V) / ss_rho_V * 100:F2}%")
+        Console.WriteLine($"  ρ_L (kg/m³)       │ {rho_L,10:F2}  │ {ss_rho_L,10:F2}  │ {(rho_L - ss_rho_L) / ss_rho_L * 100:F2}%")
+        Console.WriteLine($"  μ_V (Pa·s)        │ {mu_V,10:E3} │ {ss_mu_V,10:E3} │ {(mu_V - ss_mu_V) / ss_mu_V * 100:F2}%")
+        Console.WriteLine($"  μ_L (Pa·s)        │ {mu_L,10:E3} │ {ss_mu_L,10:E3} │ {(mu_L - ss_mu_L) / ss_mu_L * 100:F2}%")
+        Console.WriteLine($"  σ (N/m)           │ {sigma,10:F6} │ {ss_sigma,10:F6} │ {(sigma - ss_sigma) / ss_sigma * 100:F2}%")
+        Console.WriteLine()
+        Console.WriteLine($"  Temperature T     = {T:F2} °C (from CoolProp saturation)")
         Console.WriteLine()
 
         ' Separator dimensions
