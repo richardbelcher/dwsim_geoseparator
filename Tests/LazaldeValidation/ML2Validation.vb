@@ -116,22 +116,19 @@ Module ML2Validation
         Dim V_T As Double = Q_VS / A_inlet
         Console.WriteLine($"  V_T = Q_VS / A_inlet = {Q_VS:F4} / {A_inlet:F4} = {V_T:F2} m/s")
 
-        ' Vessel cross-sectional area
-        ' NOTE: ML2 spreadsheet uses A_vessel = 4.45 m² (based on D ≈ 2.38 m internal)
-        ' We use the given vessel diameter D = 2.50 m for consistency
+        ' Vessel cross-sectional area (for reference)
         Dim A_vessel As Double = Math.PI / 4 * D * D
         Console.WriteLine($"  A_vessel = π/4 × D² = π/4 × {D:F2}² = {A_vessel:F4} m²")
 
-        ' Annular area (vessel minus outlet pipe) - for reference
+        ' Annular area (vessel minus outlet pipe) - per Lazalde-Crabtree
         Dim A_annulus As Double = Math.PI / 4 * (D * D - D_e * D_e)
         Console.WriteLine($"  A_annulus = π/4 × (D² - D_e²) = π/4 × ({D:F2}² - {D_e:F2}²) = {A_annulus:F4} m²")
 
-        ' V_AN = upward steam velocity in vessel (per ML2 spreadsheet methodology)
-        ' ML2 spreadsheet uses: V_AN = Q_VS / A_vessel (labeled "Velocity in vessel")
-        ' This differs from Lazalde paper which uses annular area
-        Dim V_AN As Double = Q_VS / A_vessel
-        Console.WriteLine($"  V_AN = Q_VS / A_vessel = {Q_VS:F4} / {A_vessel:F4} = {V_AN:F4} m/s")
-        Console.WriteLine($"  (Velocity in vessel - per ML2 spreadsheet methodology)")
+        ' V_AN = upward annular STEAM velocity (per Lazalde-Crabtree definition)
+        ' This is the steam velocity in the annular region between vessel wall and outlet pipe
+        Dim V_AN As Double = Q_VS / A_annulus
+        Console.WriteLine($"  V_AN = Q_VS / A_annulus = {Q_VS:F4} / {A_annulus:F4} = {V_AN:F4} m/s")
+        Console.WriteLine($"  (Upward annular steam velocity - per Lazalde-Crabtree)")
 
         ' Tangential velocity = inlet velocity
         Dim u As Double = V_T
