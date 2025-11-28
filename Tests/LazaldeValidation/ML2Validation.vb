@@ -43,7 +43,15 @@ Module ML2Validation
         Dim D_e As Double = 0.70      ' m (steam outlet pipe diameter)
         Dim Z As Double = 5.40        ' m (cylindrical section height)
         Dim alpha As Double = 0.38    ' m (lip position, negative means below tangent)
-        Dim A_inlet As Double = 0.46  ' m² (spiral throat inlet area - geometric input)
+
+        ' Spiral inlet area calculation: A_o = Ae × Be
+        ' Per ML2 spreadsheet methodology:
+        '   Ae = spiral throat width (input from spreadsheet)
+        '   Be = D_t (inlet pipe equivalent diameter)
+        '   A_o = Ae × Be
+        Dim Ae As Double = 0.654      ' m (spiral throat width - from spreadsheet)
+        Dim Be As Double = D_t        ' m (height = inlet pipe equivalent diameter)
+        Dim A_inlet As Double = Ae * Be  ' m² (spiral throat inlet area = Ae × Be)
 
         Console.WriteLine($"  Operating Conditions:")
         Console.WriteLine($"    Pressure P        = {P / 100000:F2} bar a ({P / 1000:F0} kPa)")
@@ -56,7 +64,12 @@ Module ML2Validation
         Console.WriteLine($"    D_e (outlet)      = {D_e:F2} m")
         Console.WriteLine($"    Z (height)        = {Z:F2} m")
         Console.WriteLine($"    α (lip)           = {alpha:F2} m")
-        Console.WriteLine($"    A_inlet (spiral)  = {A_inlet:F4} m²")
+        Console.WriteLine()
+        Console.WriteLine($"  Spiral Inlet Area (per ML2 spreadsheet):")
+        Console.WriteLine($"    Ae (width)        = {Ae:F4} m")
+        Console.WriteLine($"    Be (height)       = D_t = {Be:F4} m")
+        Console.WriteLine($"    A_o = Ae × Be     = {Ae:F4} × {Be:F4} = {A_inlet:F4} m²")
+        Console.WriteLine()
         Console.WriteLine($"    D/D_t ratio       = {D / D_t:F2}")
         Console.WriteLine($"    Z/D_t ratio       = {Z / D_t:F2}")
         Console.WriteLine()
